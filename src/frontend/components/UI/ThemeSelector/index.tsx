@@ -1,18 +1,10 @@
-import React, {
-  ChangeEvent,
-  FocusEvent,
-  useContext,
-  useEffect,
-  useState
-} from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
-import { SelectField, TextInputWithIconField, InfoBox } from '..'
+import { SelectField, InfoBox, PathSelectionBox } from '..'
 import { AppSettings } from 'common/types'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
-import { Backspace } from '@mui/icons-material'
 import { writeConfig } from 'frontend/helpers'
+import { hasHelp } from 'frontend/hooks/hasHelp'
 
 export const defaultThemes = {
   midnightMirage: 'Midnight Mirage',
@@ -37,6 +29,12 @@ export const ThemeSelector = () => {
   const [appConfig, setAppConfig] = useState<AppSettings | null>(null)
   const [themesPath, setThemesPath] = useState('')
   const [themes, setThemes] = useState<string[]>(Object.keys(defaultThemes))
+
+  hasHelp(
+    'customThemesPath',
+    t('setting.custom_themes_path', 'Custom Themes Path'),
+    <p>{t('help.content.customThemesPath', 'Check our wiki.')}</p>
+  )
 
   // load themes from the custom themes path
   const loadThemes = async () => {
@@ -68,37 +66,6 @@ export const ThemeSelector = () => {
     getPath()
   }, [])
 
-  // on input change only update the state
-  const onThemesPathChanged = (e: ChangeEvent<HTMLInputElement>) => {
-    if (themesPath !== e.target.value) {
-      setThemesPath(e.target.value)
-    }
-  }
-
-  // only save config on input blur when editing manually
-  const onThemesPathBlured = (e: FocusEvent<HTMLInputElement>) => {
-    if (appConfig?.customThemesPath !== e.target.value) {
-      updatePath(e.target.value)
-    }
-  }
-
-  // show folder selector
-  const selectThemesPath = () => {
-    window.api
-      .openDialog({
-        buttonLabel: t('box.choose'),
-        properties: ['openDirectory'],
-        title: t('box.default-install-path')
-      })
-      .then((path) => {
-        updatePath(path || '')
-      })
-  }
-
-  const resetThemesPath = () => {
-    updatePath('')
-  }
-
   return (
     <>
       <SelectField
@@ -114,29 +81,17 @@ export const ThemeSelector = () => {
         ))}
       </SelectField>
 
-      <TextInputWithIconField
+      <PathSelectionBox
         label={t('setting.custom_themes_path', 'Custom Themes Path')}
         htmlId="custom_themes_path"
         placeholder={t(
           'placeholder.custom_themes_path',
           'Select the path to look for custom CSS files'
         )}
-        value={themesPath}
-        onChange={onThemesPathChanged}
-        icon={
-          !themesPath ? (
-            <FontAwesomeIcon icon={faFolderOpen} />
-          ) : (
-            <Backspace
-              data-testid="setGogdlBinaryBackspace"
-              style={{ color: '#currentColor' }}
-            />
-          )
-        }
-        onIconClick={
-          !themesPath ? async () => selectThemesPath() : () => resetThemesPath()
-        }
-        onBlur={onThemesPathBlured}
+        path={themesPath}
+        onPathChange={updatePath}
+        pathDialogTitle={t('box.default-install-path')}
+        type="directory"
         afterInput={
           <>
             <InfoBox text="infobox.help">

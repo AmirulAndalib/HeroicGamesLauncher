@@ -78,7 +78,14 @@
                 "message": "Winetricks a returnat următoarea eroare în timpul execuției:{{newLine}}{{error}}",
                 "title": "Eroare Winetricks"
             },
-            "moving": "Eroare la mutarea jocului {{error}}"
+            "moving": "Eroare la mutarea jocului {{error}}",
+            "ubisoft-connect": {
+                "title": "Ubisoft Connect",
+                "message": "Instalarea Ubisoft Connect în prefixul jocului a eșuat. Verificați pagina noastră wiki la https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac pentru a o instala manual."
+            },
+            "legendary": {
+                "generic": "A avut loc o eroare! Încercați să vă deconectați și să vă autentificați pe contul dvs. Epic. {{newline}} {{error}}"
+            }
         },
         "info": {
             "update": {
@@ -108,10 +115,10 @@
             }
         },
         "runexe": {
-            "title": "Selectați EXE pentru a rula"
+            "title": "Selectează EXE-ul pentru rulare"
         },
         "select": {
-            "button": "Selectați",
+            "button": "Selectare",
             "exe": "Selectați EXE"
         },
         "shortcuts": {
@@ -145,11 +152,18 @@
             "wine-change": {
                 "message": "Nu am putut găsi versiunea de vin selectată pentru a lansa acest titlu ({{selectedWine}}). {{newline}} Am găsit altul, doriți să continuați lansarea folosind {{foundWine}}?",
                 "title": "Vinul nu a fost găsit!"
+            },
+            "sideload": {
+                "confirmExit": {
+                    "title": "Sigur doriți să vă deconectați?"
+                }
             }
         },
         "wineprefix": "Alegeți dosarul Wine Prefix",
         "yes": "DA",
-        "dontShowAgain": "Nu mai arăta"
+        "dontShowAgain": "Nu mai arăta",
+        "choose-nile-binary": "Selectați binarul Nil",
+        "update": "Update"
     },
     "button": {
         "cancel": "Cancel",
@@ -197,7 +211,8 @@
             "start-time": "Started at",
             "type": "Type"
         },
-        "title": "Downloads"
+        "title": "Downloads",
+        "ETA": "Timpul estimat"
     },
     "epic": {
         "offline-notification-body": "Este posibil ca serviciile online să nu funcționeze complet, deoarece serverele Epic Games sunt offline!",
@@ -230,7 +245,8 @@
         "show_available_games": "Show non-Available games",
         "show_favourites_only": "Afișați numai Favoritele",
         "show_hidden": "Arata ascuns",
-        "store": "Magazin de filtre"
+        "store": "Magazin de filtre",
+        "filters": "Filtru"
     },
     "help": {
         "amdfsr": "FSR de la AMD ajută la creșterea ratei de cadre prin creșterea rezoluțiilor mai mici în modul Ecran complet. Calitatea imaginii crește de la 5 la 1 cu prețul unei ușoare atingeri de performanță. Activarea poate îmbunătăți performanța.",
@@ -270,6 +286,13 @@
         "wine": {
             "part1": "Heroic caută pentru versiuni de Wine, Proton și CrossOver în următoarele foldere:",
             "part2": "Pentru alte locuri, utilizați un link simbolic către unul dintre aceste dosare"
+        },
+        "disable_logs": "Activați această casetă de selectare pentru a dezactiva majoritatea scrierilor în fișierele jurnal (informațiile critice sunt întotdeauna înregistrate). Asigurați-vă că dezactivați această setare înainte de a raporta orice problemă.",
+        "title": {
+            "login": "Autentificare",
+            "settings": "Setări",
+            "downloadManager": "Download Manager",
+            "library": "Bibliotecă"
         }
     },
     "info": {
@@ -297,7 +320,8 @@
         "wine-repfix": {
             "message": "Wine folosește ceea ce se numește WINEPREFIX pentru a încapsula aplicațiile Windows. Acest prefix conține fișierele de configurare Wine și o reproducere a ierarhiei fișierelor C: (discul principal pe un sistem de operare Windows). În această reproducere a unității C:, sunt stocate fișierele de salvare a jocului și dependențele instalate prin winetricks."
         },
-        "wine-path-invalid": "Calea vinului este nevalidă, vă rugăm să selectați alta."
+        "wine-path-invalid": "Calea vinului este nevalidă, vă rugăm să selectați alta.",
+        "wine-path-none-found": "Nu a fost găsită nicio versiune Wine, descărcați una din Wine Manager"
     },
     "install": {
         "path": "Selectați Calea de instalare"
@@ -324,7 +348,8 @@
         "alternative_method": "Alternative Login Method",
         "epic": "Epic Games Login",
         "gog": "GOG Login",
-        "message": "Login with your platform. You can login to more than one platform at the same time."
+        "message": "Login with your platform. You can login to more than one platform at the same time.",
+        "amazon": "Conectare Amazon"
     },
     "message": {
         "sync": "Sincronizare Completă",
@@ -357,7 +382,9 @@
             "error": "Instalarea a eșuat",
             "finished": "Instalare Finalizată",
             "imported": "Joc importat",
-            "startInstall": "Instalarea a început"
+            "startInstall": "Instalarea a început",
+            "failed": "Instalarea a eșuat",
+            "paused": "Instalare întreruptă"
         },
         "moved": "Mutare Finalizată",
         "moving": "Joc de Mișcare",
@@ -369,7 +396,9 @@
         "update": {
             "canceled": "Actualizare Anulată",
             "finished": "Actualizare Finalizată",
-            "started": "Actualizarea a început"
+            "started": "Actualizarea a început",
+            "failed": "Actualizare esuata",
+            "paused": "Actualizare întreruptă"
         }
     },
     "offline-message": {
@@ -379,7 +408,7 @@
         "offline-retry-in": "Offline. Retrying in {{seconds}} seconds.",
         "retrying": "Retrying"
     },
-    "Open": "",
+    "Open": "Deschis",
     "options": {
         "advanced": {
             "key": "Nume variabilă",
@@ -414,21 +443,24 @@
     "other": {
         "gogdl-version": "Versiunea GOGDL: ",
         "legendary-version": "Versiune Legendary: ",
-        "weblate": "Ajută la traducerea Heroic."
+        "weblate": "Ajută la traducerea Heroic.",
+        "nile-version": "Versiunea Nile: "
     },
     "Other": "Other",
     "placeholder": {
         "alt-gogdl-bin": "Se utilizează binarul GOGDL încorporat...",
         "alt-legendary-bin": "Folosind binarul Legendary încorporat...",
         "custom_themes_path": "Select the path to look for custom CSS files",
-        "dxvkfpsvalue": "Postive integer value (e.g. 30, 60, ...)",
+        "dxvkfpsvalue": "Positive integer value (e.g. 30, 60, ...)",
         "egs-prefix": "Prefixul unde este instalat EGS",
-        "prefered_language": "Cod de 2 caractere (adică: „en” sau „fr”)"
+        "prefered_language": "Cod de 2 caractere (adică: „en” sau „fr”)",
+        "alt-nile-bin": "Folosind binarul Nile încorporat..."
     },
     "platforms": {
         "linux": "Linux",
         "mac": "Mac",
-        "win": "Windows"
+        "win": "Windows",
+        "browser": "Browser"
     },
     "please-wait": "Please wait...",
     "progress": "Progres",
@@ -440,7 +472,9 @@
             "empty": "Nothing to download",
             "finished": "Completed",
             "queued": "Queued",
-            "remove": "Remove from Downloads"
+            "remove": "Remove from Downloads",
+            "pause": "Întrerupeți descărcarea",
+            "resume": "Reia descărcarea"
         }
     },
     "Recent": "Jocuri Recente",
@@ -510,7 +544,10 @@
             "instructions_title": "Cum se raportează o problemă?",
             "last-log": "Ultimul jurnal",
             "no-file": "Nu a fost găsit niciun fișier jurnal",
-            "show-in-folder": "Afișați fișierul jurnal în dosar"
+            "show-in-folder": "Afișați fișierul jurnal în dosar",
+            "upload": {
+                "actions": "Action"
+            }
         },
         "mangohud": "Activați Mangohud (Mangohud trebuie instalat)",
         "manualsync": {
@@ -552,7 +589,13 @@
         "wineprefix": "dosar WinePrefix",
         "wineversion": "Versiune Wine",
         "autoUpdateGames": "Actualizați automat jocurile",
-        "ignoreGameUpdates": "Ignora actualizările jocului"
+        "ignoreGameUpdates": "Ignora actualizările jocului",
+        "disable_logs": "Dezactivați jurnalele",
+        "addgamestoapplications": "Adăugați automat jocuri la Aplicații",
+        "showMetalOverlay": "Afișați statistici suprapuse",
+        "alt-nile-bin": "Alegeți un binar alternativ pentru Nil",
+        "autodxvknvapi": "Instalare/Actualizare automată DXVK-NVAPI în Prefix",
+        "msync": "Activați Esync"
     },
     "settings": {
         "battlEyeRuntime": {
@@ -594,6 +637,13 @@
         "saves": {
             "label": "Salveaza locatia:",
             "warning": "Funcția Cloud Saves este în versiune beta, vă rugăm să faceți backup înainte de sincronizare (în cazul în care ceva nu merge bine)"
+        },
+        "advanced": {
+            "clearCache": {
+                "help8": "Jocuri instalate",
+                "help9": "Game Settings"
+            },
+            "details": "Detalii"
         }
     },
     "Settings": "Setări",
@@ -604,7 +654,8 @@
     "status": {
         "installing": "Se Instalează",
         "logging": "Autentificare...",
-        "processing": "Se procesează fișierele, așteptați"
+        "processing": "Se procesează fișierele, așteptați",
+        "preparing_login": "Se pregătește autentificare... "
     },
     "store": "Magazin",
     "stores": "Magazine",
@@ -630,7 +681,7 @@
     "two_col_table": {
         "save_hint": "Modificările din acest tabel nu sunt salvate automat. Faceți clic pe butonul +"
     },
-    "Update Available!": "",
+    "Update Available!": "Actualizare disponibila",
     "userselector": {
         "discord": "Discord",
         "logging_out": "Logging out",
@@ -666,5 +717,26 @@
     },
     "wiki_info": {
         "not_found": "Nu am putut găsi informații suplimentare."
+    },
+    "dlc": {
+        "actions": "Acțiuni",
+        "installDlcs": "Instalați toate DLC-urile",
+        "noDlcFound": "Nu s-au găsit DLC",
+        "size": "Mărime",
+        "title": "Title"
+    },
+    "amazon": "Amazon",
+    "prime-gaming": "Prime Gaming",
+    "Amazon Games": "Jocuri Amazon",
+    "winetricks": {
+        "install": "Install",
+        "loading": "Loading"
+    },
+    "category-settings": {
+        "cancel": "Cancel",
+        "warning": "Warning"
+    },
+    "window": {
+        "close": "Închide"
     }
 }

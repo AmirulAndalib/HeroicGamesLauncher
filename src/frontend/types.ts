@@ -8,25 +8,26 @@ import {
   ButtonOptions,
   LibraryTopSectionOptions,
   DMQueueElement,
-  SideloadGame
+  DownloadManagerState,
+  ExperimentalFeatures,
+  GameSettings,
+  WikiInfo,
+  ExtraInfo,
+  Status,
+  InstallInfo
 } from 'common/types'
+import { NileLoginData, NileRegisterData } from 'common/types/nile'
 
-export type Category = 'all' | 'legendary' | 'gog' | 'sideload'
+export type Category = 'all' | 'legendary' | 'gog' | 'sideload' | 'nile'
 
 export interface ContextType {
-  category: Category
   error: boolean
-  filterText: string
-  filterPlatform: string
   gameUpdates: string[]
   isRTL: boolean
+  isFullscreen: boolean
+  isFrameless: boolean
   language: string
   setLanguage: (newLanguage: string) => void
-  handleCategory: (value: Category) => void
-  handlePlatformFilter: (value: string) => void
-  handleLayout: (value: string) => void
-  handleSearch: (input: string) => void
-  layout: string
   libraryStatus: GameStatus[]
   libraryTopSection: string
   handleLibraryTopSection: (value: LibraryTopSectionOptions) => void
@@ -46,12 +47,17 @@ export interface ContextType {
     add: (appNameToAdd: string, appTitle: string) => void
     remove: (appNameToRemove: string) => void
   }
-  showHidden: boolean
-  setShowHidden: (value: boolean) => void
-  showFavourites: boolean
-  setShowFavourites: (value: boolean) => void
-  showNonAvailable: boolean
-  setShowNonAvailable: (value: boolean) => void
+  customCategories: {
+    list: Record<string, string[]>
+    listCategories: () => string[]
+    addToGame: (category: string, appName: string) => void
+    removeFromGame: (category: string, appName: string) => void
+    addCategory: (newCategory: string) => void
+    removeCategory: (category: string) => void
+    renameCategory: (oldName: string, newName: string) => void
+  }
+  currentCustomCategories: string[]
+  setCurrentCustomCategories: (newCustomCategories: string[]) => void
   theme: string
   setTheme: (themeName: string) => void
   zoomPercent: number
@@ -68,8 +74,19 @@ export interface ContextType {
     login: (token: string) => Promise<string>
     logout: () => Promise<void>
   }
+  amazon: {
+    library: GameInfo[]
+    user_id?: string
+    username?: string
+    getLoginData: () => Promise<NileLoginData>
+    login: (data: NileRegisterData) => Promise<string>
+    logout: () => Promise<void>
+  }
+  installingEpicGame: boolean
   allTilesInColor: boolean
   setAllTilesInColor: (value: boolean) => void
+  titlesAlwaysVisible: boolean
+  setTitlesAlwaysVisible: (value: boolean) => void
   setSideBarCollapsed: (value: boolean) => void
   sidebarCollapsed: boolean
   activeController: string
@@ -81,7 +98,7 @@ export interface ContextType {
   showResetDialog: () => void
   externalLinkDialogOptions: ExternalLinkDialogOptions
   handleExternalLinkDialog: (options: ExternalLinkDialogOptions) => void
-  sideloadedLibrary: SideloadGame[]
+  sideloadedLibrary: GameInfo[]
   hideChangelogsOnStartup: boolean
   setHideChangelogsOnStartup: (value: boolean) => void
   lastChangelogShown: string | null
@@ -93,9 +110,18 @@ export interface ContextType {
   }
   setIsSettingsModalOpen: (
     value: boolean,
-    type?: 'settings' | 'log',
-    gameInfo?: GameInfo | SideloadGame
+    type?: 'settings' | 'log' | 'category',
+    gameInfo?: GameInfo
   ) => void
+  help: {
+    items: { [key: string]: HelpItem }
+    addHelpItem: (helpItemId: string, helpItem: HelpItem) => void
+    removeHelpItem: (helpItemId: string) => void
+  }
+  experimentalFeatures: ExperimentalFeatures
+  handleExperimentalFeatures: (newSetting: ExperimentalFeatures) => void
+  disableDialogBackdropClose: boolean
+  setDisableDialogBackdropClose: (value: boolean) => void
 }
 
 export type DialogModalOptions = {
@@ -140,9 +166,12 @@ declare global {
       canvas_height: number
     ) => Promise<string>
     setTheme: (themeClass: string) => void
+    isSteamDeckGameMode: boolean
+    platform: NodeJS.Platform
   }
 
   interface WindowEventMap {
+    'visible-cards': CustomEvent<{ appNames: string[] }>
     'controller-changed': CustomEvent<{ controllerId: string }>
   }
 }
@@ -159,21 +188,97 @@ export interface SettingsContextType {
   config: Partial<AppSettings>
   isDefault: boolean
   appName: string
-  runner: Runner
-  gameInfo: GameInfo | null
+  runner?: Runner
+  gameInfo?: GameInfo
   isMacNative: boolean
   isLinuxNative: boolean
 }
 
-export interface LocationState {
-  fromGameCard: boolean
+export interface StoresFilters {
+  legendary: boolean
+  gog: boolean
+  nile: boolean
+  sideload: boolean
+}
+
+export interface PlatformsFilters {
+  win: boolean
+  linux: boolean
+  mac: boolean
+  browser: boolean
+}
+
+export interface LibraryContextType {
+  storesFilters: StoresFilters
+  platformsFilters: PlatformsFilters
+  filterText: string
+  setStoresFilters: (filters: StoresFilters) => void
+  setPlatformsFilters: (filters: PlatformsFilters) => void
+  handleLayout: (value: string) => void
+  handleSearch: (input: string) => void
+  layout: string
+  showHidden: boolean
+  setShowHidden: (value: boolean) => void
+  showFavourites: boolean
+  setShowFavourites: (value: boolean) => void
+  showInstalledOnly: boolean
+  setShowInstalledOnly: (value: boolean) => void
+  showNonAvailable: boolean
+  setShowNonAvailable: (value: boolean) => void
+  sortDescending: boolean
+  setSortDescending: (value: boolean) => void
+  sortInstalled: boolean
+  setSortInstalled: (value: boolean) => void
+  showSupportOfflineOnly: boolean
+  setShowSupportOfflineOnly: (value: boolean) => void
+  showThirdPartyManagedOnly: boolean
+  setShowThirdPartyManagedOnly: (value: boolean) => void
+  handleAddGameButtonClick: () => void
+  setShowCategories: (value: boolean) => void
+}
+
+export interface GameContextType {
+  appName: string
   runner: Runner
-  isLinuxNative: boolean
-  isMacNative: boolean
-  gameInfo: GameInfo
+  gameInfo: GameInfo | null
+  gameExtraInfo: ExtraInfo | null
+  gameSettings: GameSettings | null
+  gameInstallInfo: InstallInfo | null
+  is: {
+    installing: boolean
+    installingWinetricksPackages: boolean
+    installingRedist: boolean
+    launching: boolean
+    linux: boolean
+    linuxNative: boolean
+    mac: boolean
+    macNative: boolean
+    moving: boolean
+    native: boolean
+    notAvailable: boolean
+    notInstallable: boolean
+    notSupportedGame: boolean
+    playing: boolean
+    queued: boolean
+    reparing: boolean
+    sideloaded: boolean
+    syncing: boolean
+    uninstalling: boolean
+    updating: boolean
+    win: boolean
+  }
+  statusContext?: string
+  status: Status | undefined
+  wikiInfo: WikiInfo | null
 }
 
 export type DMQueue = {
   elements: DMQueueElement[]
   finished: DMQueueElement[]
+  state: DownloadManagerState
+}
+
+export interface HelpItem {
+  title: string
+  content: JSX.Element
 }

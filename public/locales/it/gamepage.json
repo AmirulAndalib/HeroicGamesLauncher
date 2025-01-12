@@ -32,18 +32,22 @@
             "title": "Ferma l'installazione"
         },
         "uninstall": {
-            "checkbox": "Rimuovi prefisso: {{prefix}}{{newLine}}Nota: questa operazione non è reversibile e saranno rimossi anche i salvataggi di cui non è stato effettuato il back up",
-            "message": "Vuoi disinstallare questo gioco?",
+            "checkbox": "Rimuovi prefisso: {{prefix}}{{newLine}}Nota: Questa operazione è irreversibile e verranno rimossi anche i salvataggi di cui non si è effettuato il backup.",
+            "message": "Vuoi disinstallare \"{{title}}\"?",
             "settingcheckbox": "Elimina le impostazioni e rimuovi il log{{newLine}}Nota: questa operazione non è reversibile. Tutte le impostazioni modificate saranno dimenticate e il log verrà eliminato.",
             "title": "Disinstalla",
-            "prefix_warning": "Il prefisso Wine per questo gioco è il prefisso predefinito. Se vuoi davvero eliminarlo, devi farlo manualmente."
+            "prefix_warning": "Il prefisso Wine per questo gioco è il prefisso predefinito. Se vuoi davvero eliminarlo, devi farlo manualmente.",
+            "dlc": "Vuoi disinstallare \"{{title}}\" (DLC)?",
+            "cannotUninstallEpic": "I giochi Epic non possono essere disinstallati mentre è in corso l'installazione di un altro gioco Epic.",
+            "gameIsRunning": "{{title}} è in esecuzione. Chiudi il gioco per disinstallarlo."
         },
         "update": {
             "message": "Questo gioco ha un aggiornamento, desideri aggiornarlo ora?",
             "title": "Il gioco richiede un aggiornamento"
         },
         "wineprefix": "Seleziona la cartella del prefisso di Wine",
-        "yes": "SI"
+        "yes": "SI",
+        "close": "Chiudi"
     },
     "button": {
         "add_to_favourites": "Aggiungi Ai Preferiti",
@@ -69,7 +73,8 @@
         "unhide_game": "Mostra gioco",
         "uninstall": "Disinstalla",
         "update": "Aggiorna",
-        "details": "Dettagli"
+        "details": "Dettagli",
+        "changelog": "Mostra Changelog"
     },
     "cloud_save_unsupported": "Non supportato",
     "disabled": "Disattivato",
@@ -88,7 +93,23 @@
         "neverPlayed": "Mai",
         "platform": "Seleziona la versione della piattaforma da installare",
         "requirements": "Requisiti Di Sistema",
-        "totalPlayed": "Tempo giocato"
+        "totalPlayed": "Tempo giocato",
+        "dlcs": "DLC",
+        "branch": {
+            "disabled": "Disabilitato",
+            "password": "Imposta password del canale privato",
+            "select": "Seleziona canale beta",
+            "setPrivateBranchPassword": "Imposta password del canale privato"
+        },
+        "builds": {
+            "version": "Versione",
+            "buildsSelector": "Seleziona versione del gioco",
+            "toggle": "Mantieni il gioco alla versione specifica"
+        },
+        "changelogFor": "Changelog di {{gameTitle}}",
+        "modify": "Modifica Installazione",
+        "extra_info": "Informazioni aggiuntive",
+        "install_info": "Informazioni d'installazione"
     },
     "gamecard": {
         "moving": "Spostamento in corso",
@@ -100,7 +121,7 @@
     },
     "hours": "Ore",
     "how-long-to-beat": {
-        "completionist": "Completamento",
+        "completionist": "Completista",
         "main-plus-extras": "Principale + Extra",
         "main-story": "Storia Principale"
     },
@@ -111,7 +132,14 @@
         "path": "Percorso d'installazione",
         "size": "Dimensione",
         "syncsaves": "Sincronizza i salvataggi",
-        "version": "Versione"
+        "version": "Versione",
+        "apple-gaming-wiki": "Valutazione di AppleGamingWiki",
+        "clickToOpen": "Clicca per aprire",
+        "game-scores": "Punteggi di gioco",
+        "installedInfo": "Informazioni di installazione",
+        "protondb-compatibility-info": "Livello di compatibilità Proton",
+        "steamdeck-compatibility-info": "Compatibilità SteamDeck",
+        "third-party-app": "Gestore Terze Parti"
     },
     "install": {
         "disk-space-left": "Spazio Disponibile",
@@ -120,11 +148,23 @@
         "path-not-writtable": "Attenzione: il percorso potrebbe non essere scrivibile.",
         "space-after-install": "Dopo l'installazione",
         "wineprefix": "Prefisso Wine",
-        "wineversion": "Versione Wine"
+        "wineversion": "Versione di Wine",
+        "anticheat-warning": {
+            "cancel": "No",
+            "message": "Il supporto dell'anticheat è non funzionante o negato. Il gioco non funzionerà. Vuoi installarlo comunque?",
+            "install": "Si (Capisco che non funzionerà)",
+            "title": "Anticheat Rotto/Negato",
+            "ok": "Ok",
+            "install_anyway": "Sì (comprendo che le funzionalità multiplayer non funzioneranno)",
+            "disabled_installation": "Il supporto anticheat è bloccato o non funzionante e le funzionalità multiplayer non funzioneranno. Il gioco non può essere installato. Per installare questo gioco, disabilita questo controllo nelle impostazioni avanzate.",
+            "multiplayer_message": "Il supporto dell'anticheat è bloccato o non funzionante. Il gioco potrebbe aprirsi ma le funzionalità multiplayer non funzioneranno. Vuoi installarlo comunque?"
+        },
+        "flatpak-path-not-writtable": "Errore: accesso a Sandbox non garantito su questa posizione, i dati andranno persi."
     },
     "label": {
         "game": {
-            "third-party-game": "Gioco di terze parti NON supportato"
+            "third-party-game": "Gioco di terze parti NON supportato",
+            "not-installable-game": "Il gioco NON è installabile"
         },
         "playing": {
             "start": "Esegui ora",
@@ -132,7 +172,11 @@
         },
         "saves": {
             "syncing": "Sincronizzando i salvataggi"
-        }
+        },
+        "launching": "Avviando",
+        "ubisoft": "Installazione di Ubisoft Connect",
+        "redist": "Installazione componenti ridistribuibili",
+        "winetricks": "Installazione pacchetti Winetricks"
     },
     "launch": {
         "options": "Opzioni di avvio..."
@@ -141,7 +185,8 @@
         "epic": "Non hai effettuato l'accesso con nessun account Epic in Heroic. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
         "gog": "Non hai effettuato l'accesso con nessun account GOG in Heroic. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
         "login": "Accedi",
-        "title": "NON hai effettuato l'accesso"
+        "title": "NON hai effettuato l'accesso",
+        "amazon": "Non hai effettuato l'accesso con un account Amazon in Heroic. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:"
     },
     "report_problem": "Segnala un problema nell'esecuzione di questo gioco",
     "sdl": {
@@ -149,20 +194,27 @@
     },
     "setting": {
         "use-default-wine-settings": "Usa le impostazioni predefinite di Wine",
-        "winecrossoverbottle": "CrossOver Bottle"
+        "winecrossoverbottle": "Bottiglia di CrossOver",
+        "show-wine-settings": "Mostra impostazioni Wine",
+        "warn-use-default-wine-settings": "Utilizza questa opzione solo se sai ciò che stai facendo.<br/> Condividere lo stesso prefisso per giochi differenti potrebbe creare problemi se le loro dipendenze sono incompatibili."
     },
     "sideload": {
         "field": {
             "title": "Titolo"
         },
         "info": {
-            "exe": "Selezione l'Eseguibile",
+            "exe": "Seleziona l'Eseguibile",
             "image": "Immagine dell'App",
-            "title": "Titolo Gioco/App"
+            "title": "Titolo Gioco/App",
+            "broser": "URL del browser",
+            "useragent": "Agente Utente Personalizzato",
+            "fullscreen": "Apri schermo intero (F11 per uscire)"
         },
         "placeholder": {
             "image": "Incolla qui l'URL di un'Immagine",
-            "title": "Aggiungi un Titolo per il tuo Gioco/App"
+            "title": "Aggiungi un Titolo per il tuo Gioco/App",
+            "url": "Incolla qui l'URL del gioco",
+            "useragent": "Scrivi un user agent personalizzato qui da utilizzare su questa applicazione/gioco su browser"
         }
     },
     "specs": {
@@ -187,7 +239,16 @@
         "uninstalling": "Disinstallando",
         "updating": "Aggiornamento in corso",
         "playing": "Giocando",
-        "moving-files": "Spostamento del file '{{file}}': {{percent}} "
+        "moving-files": "Spostamento del file '{{file}}': {{percent}}%",
+        "syncingSaves": "Sincronizzando i salvataggi",
+        "launching": "Avviando",
+        "ubisoft": "Installazione di Ubisoft",
+        "downloading": "Scaricamento",
+        "extracting": "Estrazione",
+        "gog-goodie": "Questo gioco non sembra essere installabile. Controlla i contenuti scaricabili su https://gog.com/account",
+        "goodie": "Non installabile",
+        "redist": "Installazione ridistribuibili ({{redist}})",
+        "winetricks": "Applicazione correzioni Winetricks"
     },
     "submenu": {
         "addShortcut": "Aggiungi scorciatoia",
@@ -202,9 +263,31 @@
         "settings": "Impostazioni",
         "store": "Pagina dello store",
         "verify": "Verifica e ripara",
-        "extraInfo": "Ulteriori informazioni"
+        "extraInfo": "Ulteriori informazioni",
+        "logs": "Registri",
+        "categories": "Categorie"
     },
     "help": {
-        "cloud_save_unsupported": "Questo gioco non supporta i salvataggi nel cloud. Queste informazioni sono fornite dagli sviluppatori del gioco. Alcuni giochi implementano il proprio sistema di salvataggio nel cloud"
+        "cloud_save_unsupported": "Questo gioco non supporta i salvataggi nel cloud. Queste informazioni sono fornite dagli sviluppatori del gioco. Alcuni giochi implementano il proprio sistema di salvataggio nel cloud",
+        "content": {
+            "gamePage": "Mostra tutti dettagli e le azioni del gioco. Utilizza il menù a 3 punti per altre opzioni."
+        },
+        "title": {
+            "gamePage": "Pagina del gioco"
+        }
+    },
+    "modifyInstall": {
+        "dlcsCollapsible": "DLC",
+        "nodlcs": "Nessun DLC disponibile",
+        "redMod": {
+            "collapsible": "Integrazione REDmod",
+            "enable": "Abilita mods"
+        },
+        "versionCollapsable": "Versione Gioco"
+    },
+    "third-party-managed": {
+        "header": "Questo gioco è gestito da un'applicazione di terze parti",
+        "notice1": "Questo gioco è gestito da un'applicazione di terze parti: \"{{application_name}}\"",
+        "notice2": "Dopo aver cliccato Installa, Heroic eseguirà l'applicazione al fine di completare il processo d'installazione"
     }
 }

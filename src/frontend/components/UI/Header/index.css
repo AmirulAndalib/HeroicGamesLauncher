@@ -1,24 +1,21 @@
 .Header {
   position: sticky;
   top: 0;
-  z-index: 7;
+  z-index: 10;
   display: grid;
-  grid-template-columns: 1fr minmax(min-content, 350px);
+  grid-template-columns: 1fr min-content;
   grid-template-areas: 'search filters';
   grid-gap: 8px;
   align-items: start;
   padding: var(--space-md);
-  background: var(--gradient-body-background);
+  background: var(--gradient-body-background, var(--body-background));
   color: var(--text-secondary);
 }
 
-@media screen and (max-width: 1000px) {
-  .Header {
-    grid-template-columns: 1fr min-content;
-    grid-template-areas:
-      'search search'
-      'filters filters';
-  }
+.frameless:not(.fullscreen) .Header {
+  padding-right: calc(
+    var(--overlay-controls-width) - env(titlebar-area-x, 0px)
+  );
 }
 
 .Header__filters {
@@ -26,10 +23,11 @@
   display: flex;
   align-self: center;
   justify-self: flex-end;
+  gap: 1em;
 }
 
 .Header__filters .FormControl {
-  margin-right: 8px;
+  margin-inline-end: 8px;
 }
 
 .Header__search {
@@ -43,9 +41,9 @@
 
 .Header__summary {
   grid-area: summary;
-  text-align: right;
+  text-align: end;
   white-space: nowrap;
-  margin-left: 8px;
+  margin-inline-start: 8px;
 }
 
 /* TODO move following styles to the components which use them */

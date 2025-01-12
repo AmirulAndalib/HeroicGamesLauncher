@@ -13,15 +13,21 @@
   top: 0px;
   height: 100%;
   width: 100%;
+  --gradient-angle: 90deg;
   background: linear-gradient(
-      90deg,
+      var(--gradient-angle),
       rgba(0, 0, 0, 0),
       var(--background-darker) 100%
     ),
     linear-gradient(0deg, rgba(0, 0, 0, 0) 89%, var(--background-darker) 100%);
 }
 
+.isRTL .gamePicture::after {
+  --gradient-angle: 270deg;
+}
+
 .gamePicture > .gameImg {
+  min-height: 250px;
   height: 100%;
   width: 100%;
   border-radius: 0;
@@ -30,7 +36,9 @@
 
 .gamePicture > .gameLogo {
   position: absolute;
-  bottom: 0;
-  width: 70%;
-  min-width: 140px;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50%;
+  z-index: 2;
 }

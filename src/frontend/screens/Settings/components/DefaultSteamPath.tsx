@@ -1,10 +1,9 @@
 import React, { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { InfoBox, TextInputWithIconField } from 'frontend/components/UI'
+import { InfoBox, PathSelectionBox } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { hasHelp } from 'frontend/hooks/hasHelp'
 
 const DefaultSteamPath = () => {
   const { t } = useTranslation()
@@ -18,35 +17,29 @@ const DefaultSteamPath = () => {
     return <></>
   }
 
-  const steamPathInfo = (
-    <InfoBox text="infobox.help">
-      {t(
-        'help.steam_path.info',
-        'This path lets Heroic determine what version of Proton Steam uses, for adding non-Steam games to Steam.'
-      )}
-    </InfoBox>
+  const helpContent = t(
+    'help.steam_path.info',
+    'This path lets Heroic determine what version of Proton Steam uses, for adding non-Steam games to Steam.'
   )
 
+  hasHelp(
+    'defaultSteamPath',
+    t('setting.default-steam-path', 'Default Steam path'),
+    <p>{helpContent}</p>
+  )
+
+  const steamPathInfo = <InfoBox text="infobox.help">{helpContent}</InfoBox>
+
   return (
-    <TextInputWithIconField
+    <PathSelectionBox
+      type="directory"
+      onPathChange={setDefaultSteamPath}
+      path={defaultSteamPath}
+      pathDialogTitle={t('box.default-steam-path', 'Steam path.')}
+      pathDialogDefaultPath={defaultSteamPath}
       label={t('setting.default-steam-path', 'Default Steam path')}
       htmlId="default_steam_path"
-      value={defaultSteamPath?.replaceAll("'", '')}
-      placeholder={defaultSteamPath}
-      onChange={(event) => setDefaultSteamPath(event.target.value)}
-      icon={
-        <FontAwesomeIcon icon={faFolderOpen} data-testid="setsteampathbutton" />
-      }
-      onIconClick={async () =>
-        window.api
-          .openDialog({
-            buttonLabel: t('box.choose'),
-            properties: ['openDirectory'],
-            title: t('box.default-steam-path', 'Steam path.'),
-            defaultPath: defaultSteamPath
-          })
-          .then((path) => setDefaultSteamPath(path || defaultSteamPath))
-      }
+      noDeleteButton
       afterInput={steamPathInfo}
     />
   )

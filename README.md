@@ -6,11 +6,11 @@
 [![GPLv3 license](https://img.shields.io/github/license/Heroic-Games-Launcher/HeroicGamesLauncher?style=for-the-badge&color=blue)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/main/COPYING)  
 [![Discord](https://img.shields.io/discord/812703221789097985?label=Discord%20Server&logo=discord&color=5865F2&style=for-the-badge)](https://discord.gg/rHJ2uqdquK)
 [![Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dheroicgameslauncher%26type%3Dpatrons&style=for-the-badge)](https://patreon.com/heroicgameslauncher)
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue?style=for-the-badge&logo=paypal)](https://www.paypal.me/heroicgl)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue?style=for-the-badge&logo=paypal)](https://www.paypal.me/heroiclauncher)
 [![kofi](https://img.shields.io/badge/Ko--Fi-Donate-orange?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/heroicgames)
 
 Heroic is an Open Source Game Launcher for Linux, Windows and macOS.  
-Right now it supports launching games from the Epic Games Store using [Legendary](https://github.com/derrod/legendary) and GOG Games using our custom implementation with [gogdl](https://github.com/Heroic-Games-Launcher/heroic-gogdl).
+Right now it supports launching games from the Epic Games Store using [Legendary](https://github.com/derrod/legendary), GOG Games using our custom implementation with [gogdl](https://github.com/Heroic-Games-Launcher/heroic-gogdl) and Amazon Games using [Nile](https://github.com/imLinguin/nile).
 
 Heroic is built with Web Technologies:  
 [![Typescript](https://img.shields.io/badge/Typescript-3178c6?style=for-the-badge&logo=typescript&labelColor=gray)](https://www.typescriptlang.org/)
@@ -44,32 +44,33 @@ Heroic is built with Web Technologies:
     - [Building Heroic Binaries](#building-heroic-binaries)
     - [Building with VS Code](#building-with-vs-code)
     - [Quickly testing/debugging Heroic on your own system](#quickly-testingdebugging-heroic-on-your-own-system)
-    - [Development Using a Container](#development-using-a-container)
+    - [Testing with Docker](#testing-with-docker)
   - [Sponsors](#sponsors)
   - [Screenshots](#screenshots)
   - [Credits](#credits)
 
 ## Features available right now
 
-- Login with an existing Epic Games account or GOG account
+- Login with an existing Epic Games, GOG or Amazon account
 - Install, uninstall, update, repair and move Games
 - Import an already installed game
 - Play Epic games online [AntiCheat on macOS and on Linux depends on the game]
 - Play games using Wine or Proton [Linux]
 - Play games using Crossover [macOS]
 - Download custom Wine and Proton versions [Linux]
-- Access to Epic and GOG stores directly from Heroic
+- Access to Epic, GOG and Amazon Games stores directly from Heroic
 - Search for the game on ProtonDB for compatibility information [Linux]
+- Show ProtonDB and Steam Deck compatibility information [Linux]
 - Sync installed games with an existing Epic Games Store installation
 - Sync saves with the cloud
 - Custom Theming Support
 - Download queue
-- Add Games and Applications outside GOG and Epic Games
+- Add Games and Applications outside GOG, Epic Games and Amazon Games
+- Define your categories to organize your collection
 
 ## Planned features
 
-- Support Other Store (Amazon Gaming, IndieGala, etc)
-- Play GOG games online
+- Support Other Store (IndieGala, etc)
 
 ## Supported Operating Systems
 
@@ -81,7 +82,7 @@ Heroic is built with Web Technologies:
     Chances are though that someone on our [Discord](https://discord.gg/rHJ2uqdquK) can help you
 - SteamOS (downloading using Discover only)
 - Windows 10 & 11
-- macOS 10.15 or higher
+- macOS 12 or newer
 
 ## Language Support
 
@@ -107,6 +108,7 @@ Thanks to the community, Heroic was translated to almost 40 different languages 
 - French
 - German
 - Greek
+- Hebraic
 - Japanese
 - Korean
 - Hungarian
@@ -120,6 +122,7 @@ Thanks to the community, Heroic was translated to almost 40 different languages 
 - Portuguese (Brazil)
 - Romanian
 - Russian
+- Serbian
 - Spanish
 - Slovak
 - Swedish
@@ -142,6 +145,11 @@ Thanks to the community, Heroic was translated to almost 40 different languages 
 
 Heroic is available on Flathub, so you should be able to easily install it on most distros with Software Centers (Pop!\_Shop, Discover, etc.)
 
+#### Distribution-specific instructions
+
+If you're not using the Flatpak version, make sure you have all Wine dependencies installed:
+[Wine Dependencies](https://github.com/lutris/docs/blob/master/WineDependencies.md).
+
 #### Debian, Ubuntu and Derivatives
 
 Download the file ending in .deb from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest).  
@@ -149,12 +157,10 @@ Double-click it to open it up in your Software Manager, or run `sudo dpkg -i her
 
 #### Arch (AUR)
 
-We have two AUR packages available:
+We currently only support one AUR package: `heroic-games-launcher-bin`. Although you might find other packages there, do not ask support for them on this Github or on our Discord, ask their maintainers directly.
 
 - [![Stable version badge](https://img.shields.io/aur/version/heroic-games-launcher-bin?style=flat&label=heroic-games-launcher-bin)](https://aur.archlinux.org/packages/heroic-games-launcher-bin)  
   (stable release, recommended)
-- [![Beta version badge](https://img.shields.io/aur/version/heroic-games-launcher-beta-bin?style=flat&label=heroic-games-launcher-beta-bin)](https://aur.archlinux.org/packages/heroic-games-launcher-beta-bin)  
-  (beta release, contains newer features but might be unstable)
 
 Please see [the Arch Wiki](https://wiki.archlinux.org/title/Arch_User_Repository#Installing_and_upgrading_packages) on how to install them
 
@@ -201,13 +207,13 @@ The Setup will create shortcuts to Heroic on your Desktop and in your Start Menu
 If you use Homebrew, you can run `brew install --cask --no-quarantine heroic` to install Heroic.  
 Otherwise, download the file ending in .dmg from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest), double-click it to mount it, and drag the "Heroic" application into the "Applications" folder.
 
-Afterwards open terminal and run this command : `xattr -d com.apple.quarantine /Applications/Heroic.app` this will fix the app is damaged error.
-
 ## Development environment
 
 This part will walk you through setting up a development environment so you can build Heroic binaries yourself or make changes to the code.
 
-1. Make sure Git, NodeJS, and Yarn are installed
+1. Make sure Git, NodeJS, and pnpm 9 are installed  
+   **NOTE**: On Windows, due to an issue with electron-builder, you'll need the standalone version of pnpm (`@pnpm/exe`)
+   to build packages
 2. Clone the repo and enter the cloned folder, for example with these commands:
 
    ```bash
@@ -215,7 +221,7 @@ This part will walk you through setting up a development environment so you can 
    cd HeroicGamesLauncher
    ```
 
-3. Make sure all dependencies are installed by running `yarn`
+3. Make sure all dependencies are installed by running `pnpm install`
 
 ### Building Heroic Binaries
 
@@ -224,18 +230,18 @@ Run the appropriate command for your OS:
 - Build for Linux:
 
   ```bash
-  yarn dist:linux # Optionally specify a package to create (eg: deb, pacman, tar.xz, rpm, AppImage); default: AppImage
+  pnpm dist:linux # Optionally specify a package to create (eg: deb, pacman, tar.xz, rpm, AppImage); default: AppImage
   ```
 
 - Build for Windows:
 
   ```bash
-  yarn dist:win
+  pnpm dist:win
   ```
 
 - Build for Mac:
   ```bash
-  yarn dist:mac
+  pnpm dist:mac
   ```
 
 ### Building with VS Code
@@ -246,55 +252,7 @@ To do that, open up the command palette (Ctrl + P), type in "task" and press Spa
 ### Quickly testing/debugging Heroic on your own system
 
 If you want to quickly test a change, or you're implementing features that require a lot of restarts, you can use Vite's development server to speed up the process:  
-Go to the "Run and Debug" tab of VSCode and start the "Launch Heroic (HMR & HR)" task (alternatively, if you're not using VSCode or just prefer the terminal, run `yarn start`). Heroic will start up after a short while, and once you make any change to the code, it'll reload/restart.
-
-Note: If you do not need the React developer tools while testing changes, you can skip their install by setting the `HEROIC_NO_REACT_DEVTOOLS` environment variable before running `yarn start` (for example with `HEROIC_NO_REACT_DEVTOOLS=1 yarn start`).
-
-### Development Using a Container
-
-<details>
-  <summary>Expand</summary>
-
-If you would prefer, we have a docker container defined to develop / build Heroic with (a potential reason being to avoid loading tons of dependencies on your host filesystem). There are two methods, based on whether you use VS Code.
-
-**VS Code**
-
-There is a `.devcontainer` directory containing a definition that VS Code will recognize for automatically opening your local Heroic directory in a container in VS Code.
-
-**NOTE: this requires that you install the 'Remote - Containers' extension.**
-
-1. Open the root of your local Heroic directory in VS Code.
-2. You should get a prompt in the bottom right to build and open the project in the dev container.
-3. If the above prompt does not occur, on the bottom left, there is a green icon that should be there if the remote extension is installed. Click on it, and select "Reopen in container".
-4. The bottom left green icon should now say: "Dev Container: Heroic Games Launcher".
-
-After the container's package manager runs, open a new terminal session and you should be able to run bash commands from within the container. Any yarn dist:linux builds should also now show up on your host filesystem.
-
-**Manually Building the Docker Image**
-
-If you don't use VS Code or don't want it integrated with the container, you can build and run the container manually using either Docker or Podman.
-
-1. From the root of your local Heroic directory, run:
-
-   ```bash
-   docker build -t heroicdevcontainer -f Dockerfile .
-   ```
-
-2. Assuming all went well, you can now enter the container:
-
-   ```bash
-   docker run -it -v ./:/tmp/heroic localhost/heroicdevcontainer:latest
-   ```
-
-3. The above command will mount your local Heroic dir to `/tmp/heroic` in the container (unless you used a different path).
-
-   ```
-   cd /tmp/heroic
-   ```
-
-And you should be good to go, code and build away!
-
-</details>
+Go to the "Run and Debug" tab of VSCode and start the "Launch Heroic (HMR & HR)" task (alternatively, if you're not using VSCode or just prefer the terminal, run `pnpm start`). Heroic will start up after a short while, and once you make any change to the code, it'll reload/restart.
 
 ## Sponsors
 
@@ -302,22 +260,22 @@ Thanks [Weblate](https://weblate.org/en/) for hosting our translations
 
 ![weblate](https://s.weblate.org/cdn/Logo-Darktext-borders.png)
 
-Thanks [Signpath](https://about.signpath.io) for providing free signing of Windows binaries
+Thanks [Signpath](https://signpath.io/?utm_source=foundation&utm_medium=github&utm_campaign=heroicgameslauncher) for providing free signing of Windows binaries
 
-![signpath](https://user-images.githubusercontent.com/26871415/182468471-6ef4aac6-a4e2-4ae8-93ef-d638cd01627d.png)
+[![signpath](https://user-images.githubusercontent.com/26871415/182468471-6ef4aac6-a4e2-4ae8-93ef-d638cd01627d.png)](https://signpath.io/?utm_source=foundation&utm_medium=github&utm_campaign=heroicgameslauncher)
 
 ## Screenshots
 
 <details>
   <summary>Expand</summary>
 
-![image](https://user-images.githubusercontent.com/26871415/184140182-0b0b92b0-e388-401f-910b-ff95b22db059.png)
-![image](https://user-images.githubusercontent.com/26871415/184139791-8666bc1d-a54f-467c-8c30-ea1eb6d24458.png)
-![image](https://user-images.githubusercontent.com/26871415/184139827-ff8ae4ef-f5c3-42f4-b789-1b30595ec0b0.png)
-![image](https://user-images.githubusercontent.com/26871415/184140036-28ee0d8b-a263-4ed8-a30a-1cd19436f90a.png)
-![image](https://user-images.githubusercontent.com/26871415/184141942-937f8cc0-f148-4729-b03e-bfcc8132c233.png)
-![image](https://user-images.githubusercontent.com/26871415/184144277-699e1108-52d9-4558-b113-84db5c90922c.png)
-![image](https://user-images.githubusercontent.com/26871415/184144417-b3eb0ea5-5433-4273-ad35-15317f22588b.png)
+![image](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/assets/26871415/70c9e0f2-3fa8-4e56-9bb0-0e5f8713c968)
+![image](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/assets/26871415/95e199d5-24de-4a23-a8b8-657afd657390)
+![image](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/assets/26871415/e190ddce-b16c-40c6-a509-b1337669b65a)
+![image](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/assets/26871415/9868d9eb-c141-4b46-874d-e13f668480cb)
+![image](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/assets/26871415/07e76bdb-e794-41fd-9028-062fa22f15b6)
+![image](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/assets/26871415/8daf7035-4f30-4dcd-a7ef-412ef690a286)
+![image](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/assets/26871415/61467411-f518-4d10-b859-9c2adef3302e)
 
 </details>
 

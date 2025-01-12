@@ -1,16 +1,16 @@
 import { logError } from 'backend/logger/logger'
 import { getInfoFromAppleGamingWiki } from '../utils'
-import axios from 'axios'
+import { axiosClient } from 'backend/utils'
 import { AppleGamingWikiInfo } from 'common/types'
 
 jest.mock('backend/logger/logfile')
 jest.mock('backend/logger/logger')
 jest.mock('electron-store')
 
-describe('getAppleGamingWikiInfo', () => {
+describe('getInfoFromAppleGamingWiki', () => {
   test('fetches successfully', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: 1, crossover: 'perfect' } }] }
+    const mockAxios = jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: 1 }] } }
     })
     mockAxios.mockResolvedValueOnce({
       data: {
@@ -18,7 +18,9 @@ describe('getAppleGamingWikiInfo', () => {
           wikitext: {
             '*':
               '|pcgamingwiki = The_Witcher_3:_Wild_Hunt\n' +
-              '|codeweavers  = the-witcher-3-wild-hunt\n'
+              '|codeweavers  = the-witcher-3-wild-hunt\n' +
+              '|crossover            = Playable\n' +
+              '|wine                 = Playable\n'
           }
         }
       }
@@ -29,8 +31,8 @@ describe('getAppleGamingWikiInfo', () => {
   })
 
   test('does not find page id', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: undefined } }] }
+    jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: undefined }] } }
     })
 
     const result = await getInfoFromAppleGamingWiki('The Witcher 3')
@@ -38,8 +40,8 @@ describe('getAppleGamingWikiInfo', () => {
   })
 
   test('does not find wikitext', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: 1, crossover: undefined } }] }
+    const mockAxios = jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: 1 }] } }
     })
     mockAxios.mockResolvedValueOnce({
       data: {
@@ -51,15 +53,15 @@ describe('getAppleGamingWikiInfo', () => {
 
     const result = await getInfoFromAppleGamingWiki('The Witcher 3')
     expect(result).toStrictEqual({
-      ...testAppleGamingWikiInfo,
       crossoverLink: '',
-      crossoverRating: undefined
+      wineRating: '',
+      crossoverRating: ''
     })
   })
 
   test('wikitext empty', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: 1, crossover: 'perfect' } }] }
+    const mockAxios = jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: 1 }] } }
     })
     mockAxios.mockResolvedValueOnce({
       data: {
@@ -71,13 +73,14 @@ describe('getAppleGamingWikiInfo', () => {
 
     const result = await getInfoFromAppleGamingWiki('The Witcher 3')
     expect(result).toStrictEqual({
-      ...testAppleGamingWikiInfo,
-      crossoverLink: ''
+      crossoverLink: '',
+      wineRating: '',
+      crossoverRating: ''
     })
   })
 
   test('catches axios throws', async () => {
-    jest.spyOn(axios, 'get').mockRejectedValueOnce(new Error('Failed'))
+    jest.spyOn(axiosClient, 'get').mockRejectedValueOnce(new Error('Failed'))
 
     const result = await getInfoFromAppleGamingWiki('The Witcher 3')
     expect(result).toBeNull()
@@ -92,6 +95,7 @@ describe('getAppleGamingWikiInfo', () => {
 })
 
 const testAppleGamingWikiInfo = {
-  crossoverRating: 'perfect',
+  crossoverRating: 'Playable',
+  wineRating: 'Playable',
   crossoverLink: 'the-witcher-3-wild-hunt'
 } as AppleGamingWikiInfo

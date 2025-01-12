@@ -1,6 +1,11 @@
 {
     "button": {
-        "login": "Logi sisse"
+        "login": "Logi sisse",
+        "open": "Ava link",
+        "copy": "Kopeeri",
+        "copied": "Kopeeritud!",
+        "loading": "Laadimine",
+        "error": "Viga, proovige teist koodi"
     },
     "message": {
         "part1": "Sisse logimiseks ja mängude paigaldamiseks peate kõigepealt järgima alljärgnevaid samme:",

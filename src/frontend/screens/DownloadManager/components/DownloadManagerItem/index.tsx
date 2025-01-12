@@ -2,8 +2,8 @@ import './index.css'
 
 import React, { useContext, useEffect, useState } from 'react'
 
-import { DMQueueElement } from 'common/types'
-import { ReactComponent as StopIcon } from 'frontend/assets/stop-icon.svg'
+import { DMQueueElement, DownloadManagerState } from 'common/types'
+import StopIcon from 'frontend/assets/stop-icon.svg?react'
 import { CachedImage, SvgButton } from 'frontend/components/UI'
 import { handleStopInstallation } from 'frontend/helpers/library'
 import { getGameInfo, getStoreName } from 'frontend/helpers'
@@ -11,12 +11,14 @@ import { useTranslation } from 'react-i18next'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { useNavigate } from 'react-router-dom'
-import { ReactComponent as PlayIcon } from 'frontend/assets/play-icon.svg'
-import { ReactComponent as DownIcon } from 'frontend/assets/down-icon.svg'
+import PlayIcon from 'frontend/assets/play-icon.svg?react'
+import PauseIcon from 'frontend/assets/pause-icon.svg?react'
 
 type Props = {
   element?: DMQueueElement
   current: boolean
+  state?: DownloadManagerState
+  handleClearItem?: (appName: string) => void
 }
 
 const options: Intl.DateTimeFormatOptions = {
@@ -34,10 +36,16 @@ function convertToTime(time: number) {
   }
 }
 
-const DownloadManagerItem = ({ element, current }: Props) => {
-  const { epic, gog, showDialogModal } = useContext(ContextProvider)
+const DownloadManagerItem = ({
+  element,
+  current,
+  state,
+  handleClearItem
+}: Props) => {
+  const { amazon, epic, gog, showDialogModal } = useContext(ContextProvider)
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation('translation')
+  const isPaused = state && ['idle', 'paused'].includes(state)
 
   const navigate = useNavigate()
 
@@ -49,7 +57,7 @@ const DownloadManagerItem = ({ element, current }: Props) => {
     )
   }
 
-  const library = [...epic.library, ...gog.library]
+  const library = [...epic.library, ...gog.library, ...amazon.library]
 
   const { params, addToQueueTime, endTime, type, startTime } = element
   const {
@@ -73,7 +81,11 @@ const DownloadManagerItem = ({ element, current }: Props) => {
     getNewInfo()
   }, [element])
 
-  const { art_cover, art_square } = gameInfo || {}
+  const {
+    art_cover,
+    art_square,
+    install: { is_dlc }
+  } = gameInfo || {}
 
   const [progress] = hasProgress(appName)
   const { status } = element
@@ -89,7 +101,7 @@ const DownloadManagerItem = ({ element, current }: Props) => {
 
     return handleStopInstallation(
       appName,
-      [path, folder_name],
+      path,
       t,
       progress,
       runner,
@@ -98,6 +110,9 @@ const DownloadManagerItem = ({ element, current }: Props) => {
   }
 
   const goToGamePage = () => {
+    if (is_dlc) {
+      return
+    }
     return navigate(`/gamepage/${runner}/${appName}`, {
       state: { fromDM: true, gameInfo: gameInfo }
     })
@@ -106,23 +121,48 @@ const DownloadManagerItem = ({ element, current }: Props) => {
   // using one element for the different states so it doesn't
   // lose focus from the button when using a game controller
   const handleMainActionClick = () => {
-    if (finished || canceled) {
+    if (finished) {
       return goToGamePage()
+    } else if (canceled) {
+      handleClearItem && handleClearItem(appName)
     }
 
     current ? stopInstallation() : window.api.removeFromDMQueue(appName)
   }
 
+  // using one element for the different states so it doesn't
+  // lose focus from the button when using a game controller
+  const handleSecondaryActionClick = () => {
+    if (isPaused) {
+      window.api.resumeCurrentDownload()
+    } else if (state === 'running') {
+      window.api.pauseCurrentDownload()
+    }
+  }
+
   const mainActionIcon = () => {
     if (finished) {
+      if (is_dlc) {
+        return <>-</>
+      }
       return <PlayIcon className="playIcon" />
     }
 
     if (canceled) {
-      return <DownIcon className="installIcon" />
+      return <StopIcon className="installIcon" />
     }
 
     return <StopIcon className="cancelIcon" />
+  }
+
+  const secondaryActionIcon = () => {
+    if (isPaused) {
+      return <PlayIcon className="playIcon" />
+    } else if (state === 'running') {
+      return <PauseIcon className="pauseIcon" />
+    } else {
+      return <></>
+    }
   }
 
   const getTime = () => {
@@ -146,6 +186,16 @@ const DownloadManagerItem = ({ element, current }: Props) => {
       : t('queue.label.remove', 'Remove from Downloads')
   }
 
+  const secondaryIconTitle = () => {
+    if (isPaused) {
+      return t('queue.label.resume', 'Resume download')
+    } else if (state === 'running') {
+      return t('queue.label.pause', 'Pause download')
+    } else {
+      return ''
+    }
+  }
+
   const getStatusColor = () => {
     if (element.status === 'done') {
       return 'var(--success)'
@@ -158,7 +208,9 @@ const DownloadManagerItem = ({ element, current }: Props) => {
     return current ? 'var(--text-default)' : 'var(--accent)'
   }
 
-  const currentApp = library.find((val) => val.app_name === appName)
+  const currentApp = library.find(
+    (val) => val.app_name === appName && val.runner === runner
+  )
 
   if (!currentApp) {
     return null
@@ -180,7 +232,10 @@ const DownloadManagerItem = ({ element, current }: Props) => {
         role="button"
         onClick={() => goToGamePage()}
         className="downloadManagerTitleList"
-        style={{ color: getStatusColor() }}
+        style={{
+          color: getStatusColor(),
+          cursor: is_dlc ? 'default' : 'pointer'
+        }}
       >
         {cover && <CachedImage src={cover} alt={title} />}
         <span className="titleSize">
@@ -198,11 +253,17 @@ const DownloadManagerItem = ({ element, current }: Props) => {
       <span>{translatedTypes[type]}</span>
       <span>{getStoreName(runner, t2('Other'))}</span>
       <span className="icons">
-        {
-          <SvgButton onClick={handleMainActionClick} title={mainIconTitle()}>
-            {mainActionIcon()}
+        <SvgButton onClick={handleMainActionClick} title={mainIconTitle()}>
+          {mainActionIcon()}
+        </SvgButton>
+        {current && (
+          <SvgButton
+            onClick={handleSecondaryActionClick}
+            title={secondaryIconTitle()}
+          >
+            {secondaryActionIcon()}
           </SvgButton>
-        }
+        )}
       </span>
     </div>
   )

@@ -7,12 +7,11 @@ import {
 import cx from 'classnames'
 import React, { SyntheticEvent, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { WebviewType } from 'common/types'
 import SvgButton from '../SvgButton'
 import './index.css'
 
 interface WebviewControlsProps {
-  webview: WebviewType | null
+  webview: Electron.WebviewTag | null
   initURL: string
   openInBrowser: boolean
 }
@@ -35,7 +34,7 @@ export default function WebviewControls({
 }: WebviewControlsProps) {
   const [url, setUrl] = React.useState(initURL)
   const { t } = useTranslation()
-  const [canGoBack, setCanGoBack] = useState(false)
+  const [webviewGoBack, setWebviewGoBack] = useState(false)
   const [canGoForward, setCanGoForward] = useState(false)
 
   useEffect(() => {
@@ -44,11 +43,11 @@ export default function WebviewControls({
       webview.addEventListener('did-navigate-in-page', eventCallback)
       webview.addEventListener('did-navigate', eventCallback)
       webview.addEventListener('did-navigate-in-page', () => {
-        setCanGoBack(webview.canGoBack())
+        setWebviewGoBack(webview.canGoBack())
         setCanGoForward(webview.canGoForward())
       })
       webview.addEventListener('did-navigate', () => {
-        setCanGoBack(webview.canGoBack())
+        setWebviewGoBack(webview.canGoBack())
         setCanGoForward(webview.canGoForward())
       })
       return () => {
@@ -66,7 +65,11 @@ export default function WebviewControls({
           return webview?.reload()
         }
         if (event === 'back') {
-          return webview?.goBack()
+          if (webviewGoBack) {
+            return webview?.goBack()
+          } else {
+            return history.back()
+          }
         }
         if (event === 'forward') {
           return webview?.goForward()
@@ -75,7 +78,7 @@ export default function WebviewControls({
         console.error(error)
       }
     },
-    [webview]
+    [webview, webviewGoBack]
   )
 
   return (
@@ -85,7 +88,6 @@ export default function WebviewControls({
           className="WebviewControls__icon"
           title={t('webview.controls.back')}
           onClick={() => handleButtons('back')}
-          disabled={!canGoBack}
         >
           <ArrowBackOutlined />
         </SvgButton>

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { Box, LinearProgress, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
+import { DownloadManagerState } from 'common/types'
 
 interface Point {
   download: number
@@ -17,20 +18,24 @@ const roundToNearestHundredth = function (val: number | undefined) {
 
 export default function ProgressHeader(props: {
   appName: string
-  downloading: boolean
+  state: DownloadManagerState
 }) {
+  const sampleSize = 100
   const { t } = useTranslation()
   const [progress] = hasProgress(props.appName)
   const [avgSpeed, setAvgDownloadSpeed] = useState<Point[]>(
-    Array<Point>(10).fill({ download: 0, disk: 0 })
+    Array<Point>(sampleSize).fill({ download: 0, disk: 0 })
   )
 
   useEffect(() => {
-    if (!props.downloading) {
-      setAvgDownloadSpeed(Array<Point>(10).fill({ download: 0, disk: 0 }))
+    if (props.state === 'idle') {
+      setAvgDownloadSpeed(
+        Array<Point>(sampleSize).fill({ download: 0, disk: 0 })
+      )
       return
     }
-    if (avgSpeed.length > 9) {
+
+    if (avgSpeed.length > sampleSize - 1) {
       avgSpeed.shift()
     }
 
@@ -43,7 +48,7 @@ export default function ProgressHeader(props: {
     })
 
     setAvgDownloadSpeed([...avgSpeed])
-  }, [progress, props.downloading])
+  }, [progress, props.state])
 
   return (
     <>
@@ -99,7 +104,7 @@ export default function ProgressHeader(props: {
           </div>
         </div>
       </div>
-      {props.downloading && progress.eta && (
+      {props.state !== 'idle' && props.appName && progress.eta && (
         <div className="downloadBar">
           <div className="downloadProgressStats">
             <p className="downloadStat" color="var(--text-default)">{`${
@@ -116,8 +121,13 @@ export default function ProgressHeader(props: {
               />
             </Box>
             <Box sx={{ minWidth: 35 }}>
-              <Typography variant="subtitle1">
-                {progress.eta ?? '00.00.00'}
+              <Typography
+                variant="subtitle1"
+                title={t('download-manager.ETA', 'Estimated Time')}
+              >
+                {props.state === 'running'
+                  ? progress.eta ?? '00.00.00'
+                  : 'Paused'}
               </Typography>
             </Box>
           </Box>

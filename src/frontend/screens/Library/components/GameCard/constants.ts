@@ -3,7 +3,7 @@ import fallbackImage from 'frontend/assets/heroic_card.jpg'
 
 export function getImageFormatting(cover: string, runner: Runner) {
   const imageBase = cover
-  if (imageBase === 'fallback') {
+  if (imageBase === 'fallback' || !cover) {
     return fallbackImage
   }
   if (runner === 'legendary') {
@@ -18,7 +18,8 @@ export function getCardStatus(
   isInstalled: boolean,
   layout: string
 ) {
-  const isInstalling = status === 'installing' || status === 'updating'
+  const isInstalling =
+    status === 'installing' || status === 'updating' || status === 'extracting'
   const isUpdating = status === 'updating'
   const isReparing = status === 'repairing'
   const isMoving = status === 'moving'
@@ -28,6 +29,9 @@ export function getCardStatus(
   const notAvailable = status === 'notAvailable'
   const notSupportedGame = status === 'notSupportedGame'
   const syncingSaves = status === 'syncing-saves'
+  const isLaunching = status === 'launching'
+  const isInstallingWinetricksPackages = status === 'winetricks'
+  const isInstallingRedist = status === 'redist'
 
   const haveStatus =
     isMoving ||
@@ -40,6 +44,9 @@ export function getCardStatus(
     notSupportedGame ||
     isPlaying ||
     syncingSaves ||
+    isLaunching ||
+    isInstallingWinetricksPackages ||
+    isInstallingRedist ||
     (isInstalled && layout !== 'grid')
   return {
     isInstalling,
@@ -49,6 +56,9 @@ export function getCardStatus(
     isPlaying,
     notAvailable,
     isUpdating,
+    isLaunching,
+    isInstallingWinetricksPackages,
+    isInstallingRedist,
     haveStatus
   }
 }

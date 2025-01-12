@@ -1,15 +1,15 @@
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  TextInputWithIconField,
   SelectField,
   ToggleSwitch,
-  TextInputField
+  TextInputField,
+  PathSelectionBox
 } from 'frontend/components/UI'
 import React from 'react'
 import { WineInstallation } from 'common/types'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { removeSpecialcharacters } from 'frontend/helpers'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faWarning } from '@fortawesome/free-solid-svg-icons'
 
 type Props = {
   setWineVersion: React.Dispatch<
@@ -22,6 +22,8 @@ type Props = {
   wineVersionList: WineInstallation[]
   wineVersion: WineInstallation | undefined
   title?: string
+  appName: string
+  initiallyOpen?: boolean
 }
 
 export default function WineSelector({
@@ -32,10 +34,13 @@ export default function WineSelector({
   wineVersion,
   title = 'sideload',
   crossoverBottle,
-  setCrossoverBottle
+  setCrossoverBottle,
+  initiallyOpen,
+  appName
 }: Props) {
-  const { t } = useTranslation('gamepage')
+  const { t, i18n } = useTranslation('gamepage')
 
+  const [detailsOpen, setDetailsOpen] = React.useState(!!initiallyOpen)
   const [useDefaultSettings, setUseDefaultSettings] = React.useState(false)
   const [description, setDescription] = React.useState('')
 
@@ -62,10 +67,10 @@ export default function WineSelector({
         setWineVersion(wineVersion)
         setCrossoverBottle(defaultBottle)
       } else {
-        const sugestedWinePrefix = `${prefixFolder}/${removeSpecialcharacters(
-          title
-        )}`
-        setWinePrefix(sugestedWinePrefix)
+        const dirName =
+          removeSpecialcharacters(title) || removeSpecialcharacters(appName)
+        const suggestedWinePrefix = `${prefixFolder}/${dirName}`
+        setWinePrefix(suggestedWinePrefix)
         setWineVersion(wineVersion || undefined)
       }
     }
@@ -77,35 +82,46 @@ export default function WineSelector({
 
   return (
     <>
-      <ToggleSwitch
-        htmlId="use-wine-defaults"
-        title={t(
-          'setting.use-default-wine-settings',
-          'Use Default Wine Settings'
-        )}
-        value={useDefaultSettings}
-        handleChange={() => setUseDefaultSettings(!useDefaultSettings)}
-        description={description}
-      />
-      {!useDefaultSettings && (
+      <details open={detailsOpen} onChange={() => setDetailsOpen(detailsOpen)}>
+        <summary>
+          {t('setting.show-wine-settings', 'Show Wine settings')}
+        </summary>
         <>
+          <ToggleSwitch
+            htmlId="use-wine-defaults"
+            title={t(
+              'setting.use-default-wine-settings',
+              'Use Default Wine Settings'
+            )}
+            value={useDefaultSettings}
+            handleChange={() => setUseDefaultSettings(!useDefaultSettings)}
+            description={description}
+          />
+          {useDefaultSettings && (
+            <div className="infoBox">
+              <FontAwesomeIcon icon={faWarning} />
+              <Trans
+                i18n={i18n}
+                i18nKey="setting.warn-use-default-wine-settings"
+                ns="gamepage"
+              >
+                Only use this option if you know what you are doing.
+                <br />
+                Sharing the same prefix for multiple games can create problems
+                if their dependencies are incompatible.
+              </Trans>
+            </div>
+          )}
           {showPrefix && (
-            <TextInputWithIconField
+            <PathSelectionBox
+              type="directory"
+              onPathChange={setWinePrefix}
+              path={winePrefix}
+              pathDialogTitle={t('box.wineprefix', 'Select WinePrefix Folder')}
               label={t('install.wineprefix', 'WinePrefix')}
               htmlId="setinstallpath"
-              placeholder={winePrefix}
-              value={winePrefix.replaceAll("'", '')}
-              onChange={(event) => setWinePrefix(event.target.value)}
-              icon={<FontAwesomeIcon icon={faFolderOpen} />}
-              onIconClick={async () =>
-                window.api
-                  .openDialog({
-                    buttonLabel: t('box.choose'),
-                    properties: ['openDirectory'],
-                    title: t('box.wineprefix', 'Select WinePrefix Folder')
-                  })
-                  .then((path) => setWinePrefix(path || winePrefix))
-              }
+              noDeleteButton
+              disabled={useDefaultSettings}
             />
           )}
           {showBottle && (
@@ -114,6 +130,7 @@ export default function WineSelector({
               htmlId="crossoverBottle"
               value={crossoverBottle}
               onChange={(event) => setCrossoverBottle(event.target.value)}
+              disabled={useDefaultSettings}
             />
           )}
 
@@ -121,6 +138,7 @@ export default function WineSelector({
             label={`${t('install.wineversion')}:`}
             htmlId="wineVersion"
             value={wineVersion?.name || ''}
+            disabled={useDefaultSettings}
             onChange={(e) =>
               setWineVersion(
                 wineVersionList.find(
@@ -137,7 +155,7 @@ export default function WineSelector({
               ))}
           </SelectField>
         </>
-      )}
+      </details>
     </>
   )
 }

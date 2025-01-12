@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { IpcMainEvent, OpenDialogOptions } from 'electron'
+import { IpcMainEvent, OpenDialogOptions, TitleBarOverlay } from 'electron'
 
 import {
   Runner,
@@ -28,10 +28,22 @@ import {
   DMQueueElement,
   ConnectivityStatus,
   GamepadActionArgs,
-  ExtraInfo
+  ExtraInfo,
+  LaunchOption,
+  DownloadManagerState,
+  InstallInfo,
+  WikiInfo,
+  UploadedLogData,
+  RunnerCommandStub
 } from 'common/types'
-import { LegendaryInstallInfo } from 'common/types/legendary'
-import { GOGCloudSavesLocation, GogInstallInfo } from 'common/types/gog'
+import { GameOverride, SelectiveDownload } from 'common/types/legendary'
+import { GOGCloudSavesLocation } from 'common/types/gog'
+import {
+  NileLoginData,
+  NileRegisterData,
+  NileUserData
+} from 'common/types/nile'
+import type { SystemInformation } from 'backend/utils/systeminfo'
 
 /**
  * Some notes here:
@@ -41,13 +53,13 @@ import { GOGCloudSavesLocation, GogInstallInfo } from 'common/types/gog'
  *    I've decided against that to keep it in line with the `AsyncIPCFunctions`
  *    interface
  */
+// ts-prune-ignore-next
 interface SyncIPCFunctions {
   setZoomFactor: (zoomFactor: string) => void
   changeLanguage: (language: string) => void
   notify: (args: { title: string; body: string }) => void
   frontendReady: () => void
-  loadingScreenReady: () => void
-  lock: () => void
+  lock: (playing: boolean) => void
   unlock: () => void
   quit: () => void
   openExternalUrl: (url: string) => void
@@ -67,20 +79,17 @@ interface SyncIPCFunctions {
   openCustomThemesWiki: () => void
   showConfigFileInFolder: (appName: string) => void
   removeFolder: ([path, folderName]: [string, string]) => void
-  clearCache: (showDialog?: boolean) => void
+  clearCache: (showDialog?: boolean, fromVersionChange?: boolean) => void
   resetHeroic: () => void
   createNewWindow: (url: string) => void
   logoutGOG: () => void
-  toggleVKD3D: (args: ToolArgs) => void
   logError: (message: unknown) => void
   logInfo: (message: unknown) => void
   showItemInFolder: (item: string) => void
   clipboardWriteText: (text: string) => void
+  processShortcut: (combination: string) => void
   addNewApp: (args: SideloadGame) => void
-  showLogFileInFolder: (args: {
-    appName: string
-    defaultLast?: boolean
-  }) => void
+  showLogFileInFolder: (appNameOrRunner: string) => void
   addShortcut: (appName: string, runner: Runner, fromMenu: boolean) => void
   removeShortcut: (appName: string, runner: Runner) => void
   removeFromDMQueue: (appName: string) => void
@@ -90,8 +99,43 @@ interface SyncIPCFunctions {
   'set-connectivity-online': () => void
   changeTrayColor: () => void
   setSetting: (args: { appName: string; key: string; value: unknown }) => void
+  resumeCurrentDownload: () => void
+  pauseCurrentDownload: () => void
+  cancelDownload: (removeDownloaded: boolean) => void
+  copySystemInfoToClipboard: () => void
+  minimizeWindow: () => void
+  maximizeWindow: () => void
+  unmaximizeWindow: () => void
+  closeWindow: () => void
+  setTitleBarOverlay: (options: TitleBarOverlay) => void
+  winetricksInstall: ({
+    runner: Runner,
+    appName: string,
+    component: string
+  }) => void
+  changeGameVersionPinnedStatus: (
+    appName: string,
+    runner: Runner,
+    status: boolean
+  ) => void
 }
 
+/*
+ * These events should only be used during tests to stub/mock
+ *
+ * We have to handle them in another interface because these
+ * events don't have an IpcMainEvent first argument when handled
+ */
+interface TestSyncIPCFunctions {
+  setLegendaryCommandStub: (stubs: RunnerCommandStub[]) => void
+  resetLegendaryCommandStub: () => void
+  setGogdlCommandStub: (stubs: RunnerCommandStub[]) => void
+  resetGogdlCommandStub: () => void
+  setNileCommandStub: (stubs: RunnerCommandStub[]) => void
+  resetNileCommandStub: () => void
+}
+
+// ts-prune-ignore-next
 interface AsyncIPCFunctions {
   addToDMQueue: (element: DMQueueElement) => Promise<void>
   kill: (appName: string, runner: Runner) => Promise<void>
@@ -100,23 +144,32 @@ interface AsyncIPCFunctions {
   runWineCommand: (
     args: WineCommandArgs
   ) => Promise<{ stdout: string; stderr: string }>
+  winetricksInstalled: ({
+    runner: Runner,
+    appName: string
+  }) => Promise<string[]>
+  winetricksAvailable: ({
+    runner: Runner,
+    appName: string
+  }) => Promise<string[]>
   checkGameUpdates: () => Promise<string[]>
   getEpicGamesStatus: () => Promise<boolean>
-  updateAll: () => Promise<({ status: 'done' | 'error' } | null)[]>
+  updateAll: () => Promise<({ status: 'done' | 'error' | 'abort' } | null)[]>
   getMaxCpus: () => number
   getHeroicVersion: () => string
   getLegendaryVersion: () => Promise<string>
   getGogdlVersion: () => Promise<string>
+  getCometVersion: () => Promise<string>
+  getNileVersion: () => Promise<string>
   isFullscreen: () => boolean
+  isFrameless: () => boolean
+  isMaximized: () => boolean
+  isMinimized: () => boolean
   isFlatpak: () => boolean
-  getPlatform: () => NodeJS.Platform
   showUpdateSetting: () => boolean
   getLatestReleases: () => Promise<Release[]>
   getCurrentChangelog: () => Promise<Release | null>
-  getGameInfo: (
-    appName: string,
-    runner: Runner
-  ) => Promise<GameInfo | SideloadGame | null>
+  getGameInfo: (appName: string, runner: Runner) => Promise<GameInfo | null>
   getExtraInfo: (appName: string, runner: Runner) => Promise<ExtraInfo | null>
   getGameSettings: (
     appName: string,
@@ -126,9 +179,12 @@ interface AsyncIPCFunctions {
   getInstallInfo: (
     appName: string,
     runner: Runner,
-    installPlatform: InstallPlatform
-  ) => Promise<LegendaryInstallInfo | GogInstallInfo | null>
+    installPlatform: InstallPlatform,
+    branch?: string,
+    build?: string
+  ) => Promise<InstallInfo | null>
   getUserInfo: () => Promise<UserInfo | undefined>
+  getAmazonUserInfo: () => Promise<NileUserData | undefined>
   isLoggedIn: () => boolean
   login: (sid: string) => Promise<{
     status: 'done' | 'failed'
@@ -138,15 +194,18 @@ interface AsyncIPCFunctions {
     status: 'done' | 'error'
     data?: UserData
   }>
+  authAmazon: (data: NileRegisterData) => Promise<{
+    status: 'done' | 'failed'
+    user: NileUserData | undefined
+  }>
   logoutLegendary: () => Promise<void>
+  logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
+  getLocalPeloadPath: () => Promise<string>
   readConfig: (config_class: 'library' | 'user') => Promise<GameInfo[] | string>
   requestSettings: (appName: string) => Promise<AppSettings | GameSettings>
   writeConfig: (args: { appName: string; config: Partial<AppSettings> }) => void
-  refreshLibrary: (
-    fullRefresh?: boolean,
-    library?: Runner | 'all'
-  ) => Promise<void>
+  refreshLibrary: (library?: Runner | 'all') => Promise<void>
   launch: (args: LaunchParams) => StatusPromise
   openDialog: (args: OpenDialogOptions) => Promise<string | false>
   install: (
@@ -180,15 +239,13 @@ interface AsyncIPCFunctions {
   removeApp: (args: {
     appName: string
     shouldRemovePrefix: boolean
+    runner: Runner
   }) => Promise<void>
-  launchApp: (appName: string) => Promise<boolean>
   isNative: (args: { appName: string; runner: Runner }) => boolean
-  getLogContent: (args: { appName: string; defaultLast?: boolean }) => string
-  installWineVersion: (
-    release: WineVersionInfo
-  ) => Promise<'error' | 'abort' | 'success'>
+  getLogContent: (appNameOrRunner: string) => string
+  installWineVersion: (release: WineVersionInfo) => Promise<void>
   refreshWineVersionInfo: (fetch?: boolean) => Promise<void>
-  removeWineVersion: (release: WineVersionInfo) => Promise<boolean>
+  removeWineVersion: (release: WineVersionInfo) => Promise<void>
   shortcutsExists: (appName: string, runner: Runner) => boolean
   addToSteam: (appName: string, runner: Runner) => Promise<boolean>
   removeFromSteam: (appName: string, runner: Runner) => Promise<void>
@@ -209,18 +266,23 @@ interface AsyncIPCFunctions {
   disableEosOverlay: (appName: string) => Promise<void>
   isEosOverlayEnabled: (appName?: string) => Promise<boolean>
   downloadRuntime: (runtime_name: RuntimeName) => Promise<boolean>
-  isRuntimeInstalled: (runtime_name: RuntimeName) => boolean
+  isRuntimeInstalled: (runtime_name: RuntimeName) => Promise<boolean>
   getDMQueueInformation: () => {
     elements: DMQueueElement[]
     finished: DMQueueElement[]
+    state: DownloadManagerState
   }
   'get-connectivity-status': () => {
     status: ConnectivityStatus
     retryIn: number
   }
-  getNumOfGpus: () => Promise<number>
+  getSystemInfo: (cache?: boolean) => Promise<SystemInformation>
   removeRecent: (appName: string) => Promise<void>
-  getWikiGameInfo: (title: string, id?: string) => Promise<WikiInfo | null>
+  getWikiGameInfo: (
+    title: string,
+    appName: string,
+    runner: Runner
+  ) => Promise<WikiInfo | null>
   getDefaultSavePath: (
     appName: string,
     runner: Runner,
@@ -231,20 +293,55 @@ interface AsyncIPCFunctions {
     runner: Runner
   }) => Promise<boolean>
   toggleDXVK: (args: ToolArgs) => Promise<boolean>
+  toggleVKD3D: (args: ToolArgs) => Promise<boolean>
+  toggleDXVKNVAPI: (args: ToolArgs) => Promise<boolean>
   pathExists: (path: string) => Promise<boolean>
+  getLaunchOptions: (appName: string, runner: Runner) => Promise<LaunchOption[]>
+  getGameOverride: () => Promise<GameOverride>
+  getGameSdl: (appName: string) => Promise<SelectiveDownload[]>
+  getPlaytimeFromRunner: (
+    runner: Runner,
+    appName: string
+  ) => Promise<number | undefined>
+  getAmazonLoginData: () => Promise<NileLoginData>
+  hasExecutable: (executable: string) => Promise<boolean>
+
+  setPrivateBranchPassword: (appName: string, password: string) => void
+  getPrivateBranchPassword: (appName: string) => string
+
+  getAvailableCyberpunkMods: () => Promise<string[]>
+  setCyberpunkModConfig: (props: {
+    enabled: boolean
+    modsToLoad: string[]
+  }) => Promise<void>
+
+  uploadLogFile: (
+    name: string,
+    appNameOrRunner: string
+  ) => Promise<false | [string, UploadedLogData]>
+  deleteUploadedLogFile: (url: string) => Promise<boolean>
+  getUploadedLogFiles: () => Promise<Record<string, UploadedLogData>>
 }
 
 // This is quite ugly & throws a lot of errors in a regular .ts file
 // TODO: Find a TS magician who can improve this further
+// ts-prune-ignore-next
 declare namespace Electron {
   class IpcMain extends EventEmitter {
-    public on: <
+    public on: (<
       Name extends keyof SyncIPCFunctions,
       Definition extends SyncIPCFunctions[Name]
     >(
       name: Name,
       callback: (e: IpcMainEvent, ...args: Parameters<Definition>) => void
-    ) => void
+    ) => void) &
+      (<
+        Name extends keyof TestSyncIPCFunctions,
+        Definition extends TestSyncIPCFunctions[Name]
+      >(
+        name: Name,
+        callback: (...args: Parameters<Definition>) => void
+      ) => void)
 
     public handle: <
       Name extends keyof AsyncIPCFunctions,

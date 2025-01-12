@@ -1,14 +1,16 @@
 import {
   direct3DVersionsRegEx,
+  genresRegEx,
   howLongToBeatIDRegEx,
   idgbRegEx,
   metacriticRegEx,
   opencriticRegEx,
+  releaseDateRegEx,
   steamIDRegEx
 } from './constants'
 import { logError, logInfo, LogPrefix } from '../../logger/logger'
-import axios from 'axios'
 import { GameScoreInfo, PCGamingWikiInfo } from 'common/types'
+import { axiosClient } from 'backend/utils'
 
 export async function getInfoFromPCGamingWiki(
   title: string,
@@ -37,6 +39,9 @@ export async function getInfoFromPCGamingWiki(
     const steamID = wikitext.match(steamIDRegEx)?.[1] ?? ''
     const howLongToBeatID = wikitext.match(howLongToBeatIDRegEx)?.[1] ?? ''
     const direct3DVersions = wikitext.match(direct3DVersionsRegEx)?.[1] ?? ''
+    const genres = wikitext.match(genresRegEx)?.[1] ?? ''
+
+    const releaseDates = getReleaseDates(wikitext)
 
     return {
       steamID,
@@ -44,7 +49,9 @@ export async function getInfoFromPCGamingWiki(
       metacritic,
       opencritic,
       igdb,
-      direct3DVersions: direct3DVersions.replaceAll(' ', '').split(',')
+      direct3DVersions: direct3DVersions.replaceAll(' ', '').split(','),
+      genres: genres.replaceAll(' ', '').split(','),
+      releaseDate: releaseDates
     }
   } catch (error) {
     logError(
@@ -55,9 +62,18 @@ export async function getInfoFromPCGamingWiki(
   }
 }
 
+function getReleaseDates(wikitext: string) {
+  const releaseDates = []
+  const matches = wikitext.matchAll(releaseDateRegEx)
+  for (const match of matches) {
+    releaseDates.push(`${match[1]}: ${match[2]}`)
+  }
+  return releaseDates
+}
+
 async function getPageID(title: string, id?: string): Promise<string | null> {
   if (id) {
-    const { data } = await axios.get(
+    const { data } = await axiosClient.get(
       `https://www.pcgamingwiki.com/w/api.php?action=cargoquery&tables=Infobox_game&fields=Infobox_game._pageID%3DpageID%2C&where=Infobox_game.GOGcom_ID%20HOLDS%20${id}&format=json`
     )
 
@@ -68,18 +84,18 @@ async function getPageID(title: string, id?: string): Promise<string | null> {
     }
   }
 
-  const { data } = await axios.get(
-    `https://www.pcgamingwiki.com/w/api.php?action=cargoquery&tables=_pageData&fields=_pageData._pageID%3DpageID%2C&where=_pageData._pageName%3D"${title.replaceAll(
+  const { data } = await axiosClient.get(
+    `https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=${title.replaceAll(
       ' ',
       '%20'
-    )}"&format=json`
+    )}&format=json`
   )
 
-  return data.cargoquery[0]?.title?.pageID
+  return data.query.search[0]?.pageid
 }
 
 async function getWikiText(id: string): Promise<string | null> {
-  const { data } = await axios.get(
+  const { data } = await axiosClient.get(
     `https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=${id}&redirects=true&prop=wikitext`
   )
 

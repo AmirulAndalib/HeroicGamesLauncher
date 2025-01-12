@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import {
   AlternativeExe,
   AutoDXVK,
+  AutoDXVKNVAPI,
   AutoVKD3D,
   BattlEyeRuntime,
   CrossoverBottle,
@@ -13,6 +14,7 @@ import {
   EnableEsync,
   EnableFSR,
   EnableFsync,
+  EnableMsync,
   EnvVariablesTable,
   GameMode,
   LauncherArgs,
@@ -27,8 +29,12 @@ import {
   WineVersionSelector,
   WrappersTable,
   EnableDXVKFpsLimit,
-  IgnoreGameUpdates
+  IgnoreGameUpdates,
+  Gamescope,
+  BeforeLaunchScriptPath,
+  AfterLaunchScriptPath
 } from '../../components'
+import { TabPanel } from 'frontend/components/UI'
 import ContextProvider from 'frontend/state/ContextProvider'
 import Tools from '../../components/Tools'
 import SettingsContext from '../../SettingsContext'
@@ -36,24 +42,76 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 import useSetting from 'frontend/hooks/useSetting'
 import { defaultWineVersion } from '../..'
-import Collapsible from 'frontend/components/UI/Collapsible/Collapsible'
 import SyncSaves from '../SyncSaves'
 import FooterInfo from '../FooterInfo'
+import { Tabs, Tab } from '@mui/material'
+import { GameInfo } from 'common/types'
+import DisableUMU from '../../components/DisableUMU'
 
-type Props = {
-  useDetails?: boolean
+const windowsPlatforms = ['Win32', 'Windows', 'windows']
+function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
+  if (!gameInfo) {
+    if (platform !== 'win32') {
+      return 'wine'
+    }
+    return 'advanced'
+  }
+  if (platform === 'win32') {
+    return 'advanced'
+  } else if (windowsPlatforms.includes(gameInfo?.install.platform || '')) {
+    return 'wine'
+  } else if (platform === 'darwin') {
+    return 'advanced'
+  } else {
+    return 'other'
+  }
 }
 
-export default function GamesSettings({ useDetails = true }: Props) {
+export default function GamesSettings() {
   const { t } = useTranslation()
   const { platform } = useContext(ContextProvider)
   const { isDefault, gameInfo } = useContext(SettingsContext)
   const [wineVersion] = useSetting('wineVersion', defaultWineVersion)
-  const [nativeGame, setNativeGame] = useState(false)
+  const [isNative, setIsNative] = useState(false)
   const isLinux = platform === 'linux'
+  const isWin = platform === 'win32'
+  const isMac = platform === 'darwin'
   const isCrossover = wineVersion?.type === 'crossover'
   const hasCloudSaves =
     gameInfo?.cloud_save_enabled && gameInfo.install.platform !== 'linux'
+  const isBrowserGame = gameInfo?.install.platform === 'Browser'
+  const isSideloaded = gameInfo?.runner === 'sideload'
+
+  function shouldShowSettings(tab: 'wine' | 'other'): boolean {
+    if (tab === 'wine') {
+      if (isWin || isNative || isBrowserGame) {
+        return false
+      }
+      return true
+    }
+
+    // Other tab show on linux and mac
+    if (isLinux || (isMac && tab === 'other')) {
+      return true
+    }
+    return false
+  }
+  // Get the latest used tab index for the current game
+  const localStorageKey = gameInfo
+    ? `${gameInfo.app_name}-setting_tab`
+    : 'default'
+  const latestTabIndex =
+    localStorage.getItem(localStorageKey) || getStartingTab(platform, gameInfo)
+  const [value, setValue] = useState(latestTabIndex)
+
+  const handleChange = (
+    event: React.ChangeEvent<unknown>,
+    newValue: string
+  ) => {
+    setValue(newValue)
+    // Store the latest used tab index for the current game
+    localStorage.setItem(localStorageKey, newValue.toString())
+  }
 
   useEffect(() => {
     if (gameInfo) {
@@ -62,11 +120,14 @@ export default function GamesSettings({ useDetails = true }: Props) {
           appName: gameInfo?.app_name,
           runner: gameInfo?.runner
         })
-        setNativeGame(isNative)
+        setIsNative(isNative)
       }
       getIsNative()
     }
   }, [])
+
+  const showOtherTab = shouldShowSettings('other')
+  const showWineTab = shouldShowSettings('wine')
 
   return (
     <>
@@ -80,99 +141,102 @@ export default function GamesSettings({ useDetails = true }: Props) {
         </p>
       )}
 
-      {!nativeGame && (
-        <>
-          <Collapsible
-            isOpen
-            isCollapsible={useDetails}
-            summary={isLinux ? 'Wine' : 'Wine/Crossover'}
-          >
-            <WineVersionSelector />
-            <WinePrefix />
-            <CrossoverBottle />
-
-            {!isCrossover && (
-              <>
-                <AutoDXVK />
-                {isLinux && (
-                  <>
-                    <AutoVKD3D />
-
-                    <EacRuntime />
-
-                    <BattlEyeRuntime />
-                  </>
-                )}
-                <Tools />
-              </>
-            )}
-          </Collapsible>
-        </>
-      )}
-
-      <Collapsible
-        isOpen={nativeGame}
-        isCollapsible={useDetails}
-        summary={
-          nativeGame
-            ? t('settings.navbar.advanced', 'Advanced')
-            : t('settings.navbar.other', 'Other')
-        }
+      <Tabs
+        value={value}
+        onChange={handleChange}
+        aria-label="settings tabs"
+        variant="scrollable"
       >
-        <AlternativeExe />
+        {showWineTab && <Tab label="Wine" value="wine" />}
+        {showOtherTab && (
+          <Tab label={t('settings.navbar.other', 'Other')} value="other" />
+        )}
+        <Tab
+          label={t('settings.navbar.advanced', 'Advanced')}
+          value="advanced"
+        />
 
-        {!nativeGame && <ShowFPS />}
+        {hasCloudSaves && (
+          <Tab
+            label={t('settings.navbar.sync', 'Cloud Saves Sync')}
+            value="saves"
+          />
+        )}
+        {isLinux && (
+          <Tab
+            label={t('settings.navbar.gamescope', 'Gamescope')}
+            value="gamescope"
+          />
+        )}
+      </Tabs>
 
-        {!nativeGame && <EnableDXVKFpsLimit />}
-
-        {isLinux && !nativeGame && (
+      <TabPanel value={value} index={'wine'}>
+        <WineVersionSelector />
+        <WinePrefix />
+        <CrossoverBottle />
+        {!isCrossover && (
           <>
-            <PreferSystemLibs />
-
-            <EnableEsync />
-
+            <AutoDXVK />
             {isLinux && (
               <>
-                <EnableFsync />
-
-                <EnableFSR />
-
-                <GameMode />
+                <AutoDXVKNVAPI />
+                <AutoVKD3D />
               </>
             )}
+            <EnableEsync />
+            <EnableFsync />
+            <EnableMsync />
+            <EnableFSR />
+            <EnableDXVKFpsLimit />
+            <Tools />
           </>
         )}
+      </TabPanel>
 
-        <UseDGPU />
-
-        {isLinux && <Mangohud />}
-
+      <TabPanel value={value} index={'other'}>
+        {!isNative && <ShowFPS />}
+        <Mangohud />
+        <GameMode />
+        {isLinux && <PreferSystemLibs />}
         <SteamRuntime />
+        <UseDGPU />
+        {!isNative && (
+          <>
+            <BattlEyeRuntime />
+            <EacRuntime />
+          </>
+        )}
+      </TabPanel>
 
-        <IgnoreGameUpdates />
-
-        <OfflineMode />
-
-        <EnvVariablesTable />
-
-        <WrappersTable />
-
+      <TabPanel value={value} index={'advanced'}>
+        {!isSideloaded && (
+          <>
+            <IgnoreGameUpdates />
+            <OfflineMode />
+          </>
+        )}
+        <DisableUMU />
+        <AlternativeExe />
         <LauncherArgs />
+        <div className="Field">
+          <label>Scripts:</label>
+          <BeforeLaunchScriptPath />
+          <AfterLaunchScriptPath />
+        </div>
+        <WrappersTable />
+        <EnvVariablesTable />
+        {!isSideloaded && <PreferedLanguage />}
+      </TabPanel>
 
-        <PreferedLanguage />
-      </Collapsible>
+      <TabPanel value={value} index={'saves'}>
+        <SyncSaves />
+      </TabPanel>
 
-      {hasCloudSaves && (
-        <Collapsible
-          isOpen={false}
-          isCollapsible={useDetails}
-          summary={t('settings.navbar.sync', 'Cloud Saves Sync')}
-        >
-          <SyncSaves />
-        </Collapsible>
-      )}
+      <TabPanel value={value} index={'gamescope'}>
+        <Gamescope />
+      </TabPanel>
 
-      <FooterInfo />
+      {!isDefault && <FooterInfo />}
     </>
   )
 }

@@ -3,13 +3,12 @@ import {
   InstallProgress,
   Runner,
   GameSettings,
-  InstallPlatform
+  InstallPlatform,
+  InstallInfo
 } from 'common/types'
-import { LegendaryInstallInfo } from 'common/types/legendary'
-import { GogInstallInfo } from 'common/types/gog'
 
 import { install, launch, repair, updateGame } from './library'
-import fileSize from 'filesize'
+import * as fileSize from 'filesize'
 const readFile = window.api.readConfig
 
 const writeConfig = window.api.writeConfig
@@ -19,15 +18,13 @@ const notify = (args: { title: string; body: string }) =>
 
 const loginPage = window.api.openLoginPage
 
-const getPlatform = window.api.getPlatform
-
 const sidInfoPage = window.api.openSidInfoPage
 
 const handleQuit = window.api.quit
 
 const openDiscordLink = window.api.openDiscordLink
 
-export const size = fileSize.partial({ base: 2 })
+export const size = fileSize.partial({ base: 2 }) as (arg: unknown) => string
 
 const sendKill = window.api.kill
 
@@ -75,12 +72,16 @@ const getGameSettings = async (
 const getInstallInfo = async (
   appName: string,
   runner: Runner,
-  installPlatform: InstallPlatform
-): Promise<LegendaryInstallInfo | GogInstallInfo | null> => {
+  installPlatform: InstallPlatform,
+  build?: string,
+  branch?: string
+): Promise<InstallInfo | null> => {
   return window.api.getInstallInfo(
     appName,
     runner,
-    handleRunnersPlatforms(installPlatform, runner)
+    handleRunnersPlatforms(installPlatform, runner),
+    build,
+    branch
   )
 }
 
@@ -95,9 +96,6 @@ function handleRunnersPlatforms(
     case 'Mac':
       return 'osx'
     case 'Windows':
-      return 'windows'
-    // GOG doesn't have a linux platform, so we need to get the information as windows
-    case 'linux':
       return 'windows'
     default:
       return platform
@@ -119,7 +117,10 @@ function getProgress(progress: InstallProgress): number {
 }
 
 function removeSpecialcharacters(text: string): string {
-  const regexp = new RegExp(/[:|/|*|?|<|>|\\|&|{|}|%|$|@|`|!|™|+|'|"|®]/, 'gi')
+  const regexp = new RegExp(
+    /[:|/|*|?|<|>|\\|&|{|}|%|$|@|`|!|™|+|'|"|®]/,
+    'gi'
+  )
   return text.replaceAll(regexp, '')
 }
 
@@ -129,9 +130,29 @@ const getStoreName = (runner: Runner, other: string) => {
       return 'Epic Games'
     case 'gog':
       return 'GOG'
+    case 'nile':
+      return 'Amazon Games'
     default:
       return other
   }
+}
+
+function getPreferredInstallLanguage(
+  availableLanguages: string[],
+  preferredLanguages: readonly string[]
+) {
+  const foundPreffered = preferredLanguages.find((plang) =>
+    availableLanguages.some((alang) => alang.startsWith(plang))
+  )
+  if (foundPreffered) {
+    const foundAvailable = availableLanguages.find((alang) =>
+      alang.startsWith(foundPreffered)
+    )
+    if (foundAvailable) {
+      return foundAvailable
+    }
+  }
+  return availableLanguages[0]
 }
 
 export {
@@ -140,7 +161,6 @@ export {
   getGameSettings,
   getInstallInfo,
   getLegendaryConfig,
-  getPlatform,
   getProgress,
   handleQuit,
   install,
@@ -155,5 +175,6 @@ export {
   updateGame,
   writeConfig,
   removeSpecialcharacters,
-  getStoreName
+  getStoreName,
+  getPreferredInstallLanguage
 }

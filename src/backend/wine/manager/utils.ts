@@ -7,18 +7,21 @@ import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import { logError, logInfo, LogPrefix, logWarning } from '../../logger/logger'
 import {
   WineVersionInfo,
-  ProgressInfo,
   Repositorys,
-  State,
-  VersionInfo
+  VersionInfo,
+  WineManagerStatus
 } from 'common/types'
 
 import { getAvailableVersions, installVersion } from './downloader/main'
-import { heroicToolsPath, isMac } from '../../constants'
+import { toolsPath, isMac } from '../../constants'
 import { sendFrontendMessage } from '../../main_window'
 import { TypeCheckedStoreBackend } from 'backend/electron_store'
+import {
+  createAbortController,
+  deleteAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 
-const wineDownloaderInfoStore = new TypeCheckedStoreBackend(
+export const wineDownloaderInfoStore = new TypeCheckedStoreBackend(
   'wineDownloaderInfoStore',
   {
     cwd: 'store',
@@ -35,9 +38,15 @@ async function updateWineVersionInfos(
   logInfo('Updating wine versions info', LogPrefix.WineDownloader)
   if (fetch) {
     logInfo('Fetching upstream information...', LogPrefix.WineDownloader)
+
     const repositorys = isMac
-      ? [Repositorys.WINECROSSOVER, Repositorys.WINESTAGINGMACOS]
+      ? [
+          Repositorys.WINECROSSOVER,
+          Repositorys.WINESTAGINGMACOS,
+          Repositorys.GPTK
+        ]
       : [Repositorys.WINEGE, Repositorys.PROTONGE]
+
     await getAvailableVersions({
       repositorys,
       count
@@ -56,7 +65,7 @@ async function updateWineVersionInfos(
             releases[index].installDir = old.installDir
             releases[index].isInstalled = old.isInstalled
             releases[index].disksize = old.disksize
-            if (releases[index].checksum !== old.checksum) {
+            if (releases[index].checksum !== old.checksum || old.hasUpdate) {
               releases[index].hasUpdate = true
             }
           } else {
@@ -81,36 +90,51 @@ async function updateWineVersionInfos(
   return releases
 }
 
+function getInstallDir(release: WineVersionInfo): string {
+  if (release?.type?.includes('Wine')) {
+    return `${toolsPath}/wine`
+  } else if (release.type.includes('Toolkit')) {
+    return `${toolsPath}/game-porting-toolkit`
+  } else {
+    return `${toolsPath}/proton`
+  }
+}
+
 async function installWineVersion(
   release: WineVersionInfo,
-  onProgress: (state: State, progress?: ProgressInfo) => void,
-  abortSignal: AbortSignal
+  onProgress: (status: WineManagerStatus) => void
 ) {
   let updatedInfo: WineVersionInfo
+  const variant = release.hasUpdate ? 'update' : 'installation'
 
-  if (!existsSync(`${heroicToolsPath}/wine`)) {
-    mkdirSync(`${heroicToolsPath}/wine`, { recursive: true })
+  if (!existsSync(`${toolsPath}/wine`)) {
+    mkdirSync(`${toolsPath}/wine`, { recursive: true })
   }
 
-  if (!existsSync(`${heroicToolsPath}/proton`)) {
-    mkdirSync(`${heroicToolsPath}/proton`, { recursive: true })
+  if (isMac && !existsSync(`${toolsPath}/game-porting-toolkit`)) {
+    mkdirSync(`${toolsPath}/game-porting-toolkit`, { recursive: true })
+  }
+
+  if (!existsSync(`${toolsPath}/proton`)) {
+    mkdirSync(`${toolsPath}/proton`, { recursive: true })
   }
 
   logInfo(
-    `Start installation of wine version ${release.version}`,
+    `Start ${variant} of wine version ${release.version}`,
     LogPrefix.WineDownloader
   )
 
-  const installDir = release?.type?.includes('Wine')
-    ? `${heroicToolsPath}/wine`
-    : `${heroicToolsPath}/proton`
+  const installDir = getInstallDir(release)
+
+  const abortController = createAbortController(release.version)
 
   try {
     const response = await installVersion({
       versionInfo: release as VersionInfo,
       installDir,
+      overwrite: release.hasUpdate,
       onProgress: onProgress,
-      abortSignal: abortSignal
+      abortSignal: abortController.signal
     })
     updatedInfo = {
       ...response.versionInfo,
@@ -120,13 +144,15 @@ async function installWineVersion(
       type: release.type
     }
   } catch (error) {
-    if (abortSignal.aborted) {
+    if (abortController.signal.aborted) {
       logWarning(error, LogPrefix.WineDownloader)
       return 'abort'
     } else {
       logError(error, LogPrefix.WineDownloader)
       return 'error'
     }
+  } finally {
+    deleteAbortController(release.version)
   }
 
   // Update stored information
@@ -157,7 +183,7 @@ async function installWineVersion(
   }
 
   logInfo(
-    `Finished installation of wine version ${release.version}`,
+    `Finished ${variant} of wine version ${release.version}`,
     LogPrefix.WineDownloader
   )
 

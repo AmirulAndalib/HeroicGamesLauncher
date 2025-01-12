@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react'
 
 import CurrentDownload from './components/CurrentDownload'
 import SidebarLinks from './components/SidebarLinks'
-import './index.scss'
+import './index.css'
 import HeroicVersion from './components/HeroicVersion'
 import { DMQueueElement } from 'common/types'
 
-import { ReactComponent as HeroicIcon } from 'frontend/assets/heroic-icon.svg'
+import HeroicIcon from 'frontend/assets/heroic-icon.svg?react'
+import { useNavigate } from 'react-router-dom'
+import { WebviewTag } from 'electron'
 
 let sidebarSize = localStorage.getItem('sidebar-width') || 240
 const minWidth = 60
@@ -16,6 +18,8 @@ const collapsedWidth = 120
 export default React.memo(function Sidebar() {
   const sidebarEl = useRef<HTMLDivElement | null>(null)
   const [currentDMElement, setCurrentDMElement] = useState<DMQueueElement>()
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     window.api.getDMQueueInformation().then(({ elements }) => {
@@ -36,7 +40,7 @@ export default React.memo(function Sidebar() {
   useEffect(() => {
     if (!sidebarEl.current) return
 
-    if (sidebarSize < collapsedWidth) {
+    if (Number(sidebarSize) < collapsedWidth) {
       sidebarEl.current.classList.add('collapsed')
     } else {
       sidebarEl.current.classList.remove('collapsed')
@@ -45,13 +49,29 @@ export default React.memo(function Sidebar() {
     sidebarEl.current.style.setProperty('--sidebar-width', `${sidebarSize}px`)
   }, [sidebarEl])
 
+  useEffect(() => {
+    window.api.handleGoToScreen((e, screen) => {
+      // handle navigate to screen
+      navigate(screen, { state: { fromGameCard: false } })
+    })
+  }, [])
+
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    const isRTL = document.getElementById('app')?.classList.contains('isRTL')
+    const viewportWidth = window.innerWidth
+
     let mouseDragX = e.clientX
+    if (isRTL) {
+      mouseDragX = viewportWidth - mouseDragX
+    }
     let dragging = true
 
     const onMouseMove = (e: MouseEvent) => {
       if (e.clientX !== 0) {
         mouseDragX = e.clientX
+        if (isRTL) {
+          mouseDragX = viewportWidth - e.clientX
+        }
       }
     }
 
@@ -61,11 +81,23 @@ export default React.memo(function Sidebar() {
       document.body.removeEventListener('mouseleave', finishDrag)
       dragging = false
       localStorage.setItem('sidebar-width', sidebarSize.toString())
+
+      // Re-enable pointer events on webview element
+      const webviewEl = document.querySelector<WebviewTag>('webview')
+      if (webviewEl) {
+        webviewEl.style.pointerEvents = 'auto'
+      }
     }
 
     document.body.addEventListener('mouseup', finishDrag)
     document.body.addEventListener('mouseleave', finishDrag)
     document.body.addEventListener('mousemove', onMouseMove)
+
+    // Disable pointer events on webview element
+    const webviewEl = document.querySelector<WebviewTag>('webview')
+    if (webviewEl) {
+      webviewEl.style.pointerEvents = 'none'
+    }
 
     const dragFrame = () => {
       if (!sidebarEl.current) return

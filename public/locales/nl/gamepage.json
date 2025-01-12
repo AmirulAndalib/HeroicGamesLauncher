@@ -18,13 +18,13 @@
             "title": "Verifiëren en repareren"
         },
         "runexe": {
-            "title": "Select EXE to Run"
+            "title": "Selecteer EXE om uit te voeren"
         },
         "select": {
-            "button": "Select"
+            "button": "Selecteer"
         },
         "sideload": {
-            "exe": "Select Executable"
+            "exe": "Selecteer uitvoerbaar bestand"
         },
         "stopInstall": {
             "keepInstalling": "Doorgaan met installeren",
@@ -32,46 +32,51 @@
             "title": "Installatie stoppen"
         },
         "uninstall": {
-            "checkbox": "Remove prefix: {{prefix}}{{newLine}}Note: This can't be undone and will also remove not backed up save files.",
-            "message": "Wilt u dit spel verwijderen?",
-            "settingcheckbox": "Erase settings and remove log{{newLine}}Note: This can't be undone. Any modified settings will be forgotten and log will be deleted.",
+            "checkbox": "Verwijder prefix: {{prefix}}{{newLine}}Note: Dit kan niet terug gedraaid worden, en zal ook opslagbestanden verwijderen welke niet gebackupped zijn.",
+            "message": "Wilt u {{title}} verwijderen?",
+            "settingcheckbox": "Herstel instellingen en verwijder log{{newLine}}Let op: Dit kan niet ongedaan gemaakt worden. Elke aangepaste instelling wordt vergeten en logboek zal verwijderd worden.",
             "title": "Verwijderen",
-            "prefix_warning": "Het Wine-voorvoegsel voor dit spel is het standaardvoorvoegsel. Als u het echt wilt verwijderen, moet u dit handmatig doen."
+            "prefix_warning": "Het Wine-voorvoegsel voor dit spel is het standaardvoorvoegsel. Als u het echt wilt verwijderen, moet u dit handmatig doen.",
+            "dlc": "Wilt u deze \"{{title}}\" DLC verwijderen?",
+            "cannotUninstallEpic": "Epic Games kan niet verwijderd worden wanneer een ander Epic spel wordt geïnstalleerd.",
+            "gameIsRunning": "{{title}} draait. Sluit het programma om het te verwijderen."
         },
         "update": {
             "message": "Dit spel heeft een update, update nu toepassen?",
             "title": "Het spel heeft een update nodig"
         },
-        "wineprefix": "Select WinePrefix Folder",
-        "yes": "JA"
+        "wineprefix": "Selecteer WinePrefix Map",
+        "yes": "JA",
+        "close": "sluit"
     },
     "button": {
-        "add_to_favourites": "Add To Favourites",
+        "add_to_favourites": "Voeg toe aan favorieten",
         "cancel": "Pauzeren/Annuleren",
         "continue": "Doorgaan met Download",
-        "finish": "Finish",
-        "force_update": "Force Update if Available",
-        "force-innstall": "Force Install",
-        "hide_game": "Hide Game",
+        "finish": "Gereed",
+        "force_update": "Forceer update indien beschikbaar",
+        "force-innstall": "Forceer installeren",
+        "hide_game": "Verberg Game",
         "import": "Spel importeren",
         "install": "Installeren",
-        "no-path-selected": "No path selected",
+        "no-path-selected": "Geen pad geselecteerd",
         "queue": {
-            "remove": "Remove from Queue"
+            "remove": "Verwijder van wachtrij"
         },
-        "remove_from_favourites": "Remove From Favourites",
-        "remove_from_recent": "Remove From Recent",
+        "remove_from_favourites": "Verwijder uit favorieten",
+        "remove_from_recent": "Verwijder uit recent",
         "run-exe-first": "Run Installer First",
         "running-setup": "Running Setup",
         "sideload": {
-            "edit": "Edit App/Game"
+            "edit": "Bewerk App/Game"
         },
-        "unhide_game": "Unhide Game",
+        "unhide_game": "Zet Game terug",
         "uninstall": "Verwijderen",
         "update": "Update",
-        "details": "Details"
+        "details": "Details",
+        "changelog": "Toon Changelog"
     },
-    "cloud_save_unsupported": "Unsupported",
+    "cloud_save_unsupported": "Niet ondersteund",
     "disabled": "Uitgeschakeld",
     "dlc": {
         "installDlcs": "Installeer alle DLC's"
@@ -83,12 +88,28 @@
         "getting-download-size": "Geting download size",
         "getting-install-size": "Geting install size",
         "installSize": "Installatie grootte",
-        "language": "Language",
+        "language": "Taal",
         "lastPlayed": "Laatst gespeeld",
         "neverPlayed": "Nooit",
-        "platform": "Select Platform Version to Install",
-        "requirements": "System Requirements",
-        "totalPlayed": "Tijd gespeeld"
+        "platform": "Selecteer platformversie om te installeren",
+        "requirements": "Systeembenodigdheden",
+        "totalPlayed": "Tijd gespeeld",
+        "dlcs": "DLCs",
+        "branch": {
+            "disabled": "Disabled",
+            "select": "Selecteer bètakanaal",
+            "password": "Ze wachtwoord voor privékanaal",
+            "setPrivateBranchPassword": "Zet wachtwoord voor privékanaal"
+        },
+        "builds": {
+            "version": "Versie",
+            "toggle": "Behoud het spel op de specifieke versie",
+            "buildsSelector": "Selecteer spelversie"
+        },
+        "modify": "Pas installatie aan",
+        "changelogFor": "Changelog van {{gameTitle}}",
+        "extra_info": "Extra info",
+        "install_info": "Installatie-info"
     },
     "gamecard": {
         "moving": "Aan het verplaatsen",
@@ -98,33 +119,52 @@
         "error": "Unknown error",
         "noDescription": "geen beschrijving beschikbaar"
     },
-    "hours": "Hours",
+    "hours": "Uren",
     "how-long-to-beat": {
         "completionist": "Completionist",
-        "main-plus-extras": "Main + Extras",
-        "main-story": "Main Story"
+        "main-plus-extras": "Hoofd + Extra's",
+        "main-story": "Hoofdverhaal"
     },
     "howLongToBeat": "How Long To Beat",
     "info": {
         "canRunOffline": "Internetverbinding Verplicht",
-        "installedPlatform": "Installed Platform",
+        "installedPlatform": "Geïnstalleerd platform",
         "path": "Installatie pad",
         "size": "Grootte",
         "syncsaves": "Synchroniseer saves",
-        "version": "Versie"
+        "version": "Versie",
+        "apple-gaming-wiki": "AppleGamingWiki-beoordeling",
+        "clickToOpen": "Klik om te openen",
+        "game-scores": "Spelscores",
+        "installedInfo": "Geïnstalleerde informatie",
+        "protondb-compatibility-info": "Proton-compatibiliteitslaag",
+        "steamdeck-compatibility-info": "SteamDeck-compatibiliteit",
+        "third-party-app": "Beheerder van derden"
     },
     "install": {
-        "disk-space-left": "Space Available",
-        "not-enough-disk-space": "Not enough disk space",
-        "path": "Select Install Path",
-        "path-not-writtable": "Warning: path might not be writable.",
-        "space-after-install": "After Install",
+        "disk-space-left": "Beschikbare ruimte",
+        "not-enough-disk-space": "Niet genoeg schijfruimte",
+        "path": "Selecteer installatiepad",
+        "path-not-writtable": "Waarschuwing: pad mogelijk niet schrijfbaar",
+        "space-after-install": "Na installatie",
         "wineprefix": "WinePrefix",
-        "wineversion": "Wine Version"
+        "wineversion": "Wine Versie",
+        "anticheat-warning": {
+            "install": "Ja (Ik begrijp dat dit niet zal werken)",
+            "cancel": "Nee",
+            "title": "Anticheat geblokkeerd/stuk",
+            "message": "De anticheat-ondersteuning is stuk of is geblokkeerd. Deze game zal niet werken. Wil je het toch installeren?",
+            "ok": "Ok",
+            "install_anyway": "Ja (Ik begrijp dat de multiplayeronderdelen niet zullen werken)",
+            "multiplayer_message": "De anticheatondersteuning is kapot of verworpen. Het spel opent mogelijks wel, maal multiplayeronderdelen werken niet. Toch installeren?",
+            "disabled_installation": "De anticheatondersteuning is kapot of verworpen en multiplayeronderdelen werken niet. Het spel kan niet geïnstalleerd worden. Om het spel toch te installeren, zet de check in de geavanceerde instellingen uit."
+        },
+        "flatpak-path-not-writtable": "Fout: Sandboxtoegang werd niet toegestaan naar dit pad, er zal data verloren gaan."
     },
     "label": {
         "game": {
-            "third-party-game": "Third-Party Game NOT Supported"
+            "third-party-game": "Spel van derde partij NIET ondersteund",
+            "not-installable-game": "Spel kan NIET worden geïnstalleerd"
         },
         "playing": {
             "start": "Nu spelen",
@@ -132,37 +172,46 @@
         },
         "saves": {
             "syncing": "Saves synchroniseren"
-        }
+        },
+        "launching": "Lancering",
+        "ubisoft": "Ubisoft Connect installeren",
+        "winetricks": "Winetricks Paketten aan het installeren"
     },
     "launch": {
         "options": "Opstartopties..."
     },
     "not_logged_in": {
-        "epic": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "gog": "You are not logged in with a GOG account in Heroic. Don't use the store page to login, click the following button instead:",
+        "epic": "Je bent niet ingelogd met een Epic account in Heroic. Gebruik de winkel pagina NIET om in te loggen,  Klik in plaats op de volgende knop:",
+        "gog": "Je bent niet ingelogd met een GOG account in Heroic. Gebruik de winkel pagina NIET om in te loggen,  Klik in plaats op de volgende knop:",
         "login": "Log in",
-        "title": "You are NOT logged in"
+        "title": "Je bent NIET ingelogd",
+        "amazon": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:"
     },
-    "report_problem": "Report a problem running this game",
+    "report_problem": "Rapporteer een probleem met deze game",
     "sdl": {
         "title": "Selecteer componenten om te installeren"
     },
     "setting": {
-        "use-default-wine-settings": "Use Default Wine Settings",
+        "use-default-wine-settings": "Gebruik \"Default Wine\" instellingen",
         "winecrossoverbottle": "CrossOver Bottle"
     },
     "sideload": {
         "field": {
-            "title": "Title"
+            "title": "Titel"
         },
         "info": {
-            "exe": "Select Executable",
+            "exe": "Selecteer uitvoerbaar bestand",
             "image": "App Image",
-            "title": "Game/App Title"
+            "title": "Game/App Titel",
+            "broser": "BrowserURL",
+            "fullscreen": "Start volledig scherm (F11 om af te sluiten)",
+            "useragent": "Aangepaste User Agent"
         },
         "placeholder": {
-            "image": "Paste an Image URL here",
-            "title": "Add a title to your Game/App"
+            "image": "Plak een foto URL hier",
+            "title": "Voeg een titel toe aan jouw Game/App",
+            "url": "Plak hier de game-URL",
+            "useragent": "Schrijf een aangepaste user agent hier om te gebruiken in deze browser applicatie/game"
         }
     },
     "specs": {
@@ -171,40 +220,68 @@
     },
     "status": {
         "clickToUpdate": "Klik om te Updaten",
-        "gameNotAvailable": "Game not available",
+        "gameNotAvailable": "Game niet beschikbaar",
         "hasUpdates": "Nieuwe versie beschikbaar!",
         "installed": "Geïnstalleerd",
         "installing": "Installeren",
         "moving": "Spel verplaatsen, geduld alstublieft",
         "notinstalled": "Dit spel is niet geïnstalleerd",
-        "notSupported": "Not supported",
-        "notSupportedGame": "Not Supported",
+        "notSupported": "Niet ondersteund",
+        "notSupportedGame": "Niet ondersteund",
         "processing": "Processing files, please wait",
-        "queued": "Queued",
+        "queued": "In wachtrij",
         "reparing": "Spel aan het repareren, even geduld",
-        "this-game-uses-third-party": "This game uses third party launcher and it is not supported yet",
+        "this-game-uses-third-party": "Deze game gebruikt een launcher van een derde partij en is nog niet beschikbaar",
         "totalDownloaded": "Totaal gedownload",
-        "uninstalling": "Uninstalling",
+        "uninstalling": "Aan het verwijderen",
         "updating": "Spel aan het updaten",
         "playing": "Spelen",
-        "moving-files": "Bestand verplaatsen '{{file}}': {{percent}} "
+        "moving-files": "Bestand verplaatsen '{{file}}': {{percent}} ",
+        "syncingSaves": "Saves synchroniseren",
+        "launching": "Lancering",
+        "ubisoft": "Ubisoft installeren",
+        "downloading": "Downloaden",
+        "extracting": "Extraheren",
+        "gog-goodie": "Deze game lijkt niet te kunnen worden geïnstalleerd. Controleer downloadbare inhoud op https://gog.com/account",
+        "goodie": "Niet installeerbaar"
     },
     "submenu": {
         "addShortcut": "Snelkoppeling toevoegen",
-        "addToSteam": "Add to Steam",
+        "addToSteam": "Voeg toe aan Steam",
         "change": "Wijzig installatiepad",
-        "disableEosOverlay": "Disable EOS Overlay",
-        "enableEosOverlay": "Enable EOS Overlay",
+        "disableEosOverlay": "Schakel EOS Overlay uit",
+        "enableEosOverlay": "Schakel EOS Overlay in",
         "move": "Spel verplaatsen",
         "protondb": "Compatibiliteit controleren",
-        "removeFromSteam": "Remove from Steam",
-        "removeShortcut": "Remove shortcuts",
+        "removeFromSteam": "Verwijder uit Steam",
+        "removeShortcut": "Verwijder snelkoppelingen",
         "settings": "Instellingen",
         "store": "Winkel",
         "verify": "Verifiëren en repareren",
-        "extraInfo": "Extra info"
+        "extraInfo": "Extra info",
+        "logs": "Logboeken",
+        "categories": "Categorieën"
     },
     "help": {
-        "cloud_save_unsupported": "Deze game ondersteunt geen opslag in de cloud. Deze informatie wordt verstrekt door de game-ontwikkelaars. Sommige games implementeren hun eigen cloudopslagsysteem"
+        "cloud_save_unsupported": "Deze game ondersteunt geen opslag in de cloud. Deze informatie wordt verstrekt door de game-ontwikkelaars. Sommige games implementeren hun eigen cloudopslagsysteem",
+        "content": {
+            "gamePage": "Toon alle game details en acties. Gebruik het \"3 dot\" menu voor meer opties."
+        },
+        "title": {
+            "gamePage": "Gamepagina"
+        }
+    },
+    "modifyInstall": {
+        "redMod": {
+            "collapsible": "REDmod Intergratie",
+            "enable": "Mods inschakelen"
+        },
+        "versionCollapsable": "Game Versie",
+        "dlcsCollapsible": "DLC",
+        "nodlcs": "Geen DLC beschikbaar"
+    },
+    "third-party-managed": {
+        "header": "Dit spel wordt beheerd door een third-party applicatie",
+        "notice1": "Het volgende spel wordt beheerd door een third-party applicatie: \"{{application_name}}\""
     }
 }

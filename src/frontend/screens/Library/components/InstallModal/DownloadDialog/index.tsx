@@ -1,8 +1,7 @@
 import {
   faDownload,
   faHardDrive,
-  faSpinner,
-  faFolderOpen
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
@@ -10,17 +9,17 @@ import classNames from 'classnames'
 import {
   GameInfo,
   GameStatus,
+  InstallInfo,
   InstallPlatform,
   Runner,
   WineInstallation
 } from 'common/types'
-import { GogInstallInfo } from 'common/types/gog'
-import { LegendaryInstallInfo } from 'common/types/legendary'
 import {
-  SelectField,
-  TextInputWithIconField,
-  ToggleSwitch
-} from 'frontend/components/UI'
+  SelectiveDownload,
+  DLCInfo as LegendaryDLCInfo
+} from 'common/types/legendary'
+import { BuildItem, DLCInfo as GOGDLCInfo } from 'common/types/gog'
+import { PathSelectionBox, ToggleSwitch } from 'frontend/components/UI'
 import Anticheat from 'frontend/components/UI/Anticheat'
 import {
   DialogHeader,
@@ -32,7 +31,8 @@ import {
   size,
   getInstallInfo,
   writeConfig,
-  install
+  install,
+  getPreferredInstallLanguage
 } from 'frontend/helpers'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { InstallProgress } from 'frontend/types'
@@ -45,8 +45,12 @@ import React, {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '../index'
-import { SDL_GAMES, SelectiveDownload } from '../selective_dl'
 import { configStore } from 'frontend/helpers/electronStores'
+import DLCDownloadListing from './DLCDownloadListing'
+import BuildSelector from './BuildSelector'
+import GameLanguageSelector from './GameLanguageSelector'
+import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
+import BranchSelector from './BranchSelector'
 
 interface Props {
   backdropClick: () => void
@@ -63,36 +67,29 @@ interface Props {
 
 type DiskSpaceInfo = {
   notEnoughDiskSpace: boolean
-  message: string | `ERROR`
+  message: string
   validPath: boolean
+  validFlatpakPath: boolean
   spaceLeftAfter: string
 }
 
 const storage: Storage = window.localStorage
 
-function getInstallLanguage(
-  availableLanguages: string[],
-  preferredLanguages: readonly string[]
-) {
-  const foundPreffered = preferredLanguages.find((plang) =>
-    availableLanguages.some((alang) => alang.startsWith(plang))
-  )
-  if (foundPreffered) {
-    const foundAvailable = availableLanguages.find((alang) =>
-      alang.startsWith(foundPreffered)
-    )
-    if (foundAvailable) {
-      return foundAvailable
-    }
-  }
-  return availableLanguages[0]
-}
-
 function getUniqueKey(sdl: SelectiveDownload) {
-  return sdl.tags.join(',')
+  if (sdl.tags) {
+    return sdl.tags.join(',')
+  }
+  return ''
 }
 
 const userHome = configStore.get('userHome', '')
+
+function getDefaultInstallPath() {
+  const { defaultInstallPath = `${userHome}/Games/Heroic` } = {
+    ...configStore.get_nodefault('settings')
+  }
+  return defaultInstallPath
+}
 
 export default function DownloadDialog({
   backdropClick,
@@ -114,24 +111,30 @@ export default function DownloadDialog({
 
   const isWin = platform === 'win32'
 
-  const [gameInstallInfo, setGameInstallInfo] = useState<
-    LegendaryInstallInfo | GogInstallInfo | null
-  >(null)
+  const [gameInstallInfo, setGameInstallInfo] = useState<InstallInfo | null>(
+    null
+  )
   const [installLanguages, setInstallLanguages] = useState(Array<string>())
   const [installLanguage, setInstallLanguage] = useState('')
 
-  const { defaultInstallPath = '' } = {
-    ...configStore.get_nodefault('settings')
-  }
+  const [diskSize, setDiskSize] = useState(0)
+
+  const [gameBuilds, setBuilds] = useState<BuildItem[]>([])
+  const [selectedBuild, setSelectedBuild] = useState<string | undefined>()
+
+  const [savedBranchPassword, setSavedBranchPassword] = useState<string>('')
+  const [branches, setBranches] = useState<Array<string | null>>([])
+  const [branch, setBranch] = useState<string | undefined>()
 
   const [installPath, setInstallPath] = useState(
-    previousProgress.folder || defaultInstallPath || `${userHome}/Games/Heroic`
+    previousProgress.folder || getDefaultInstallPath()
   )
   const gameStatus: GameStatus = libraryStatus.filter(
     (game: GameStatus) => game.appName === appName
   )[0]
 
-  const [installDlcs, setInstallDlcs] = useState(false)
+  const [dlcsToInstall, setDlcsToInstall] = useState<string[]>([])
+  const [sdls, setSdls] = useState<SelectiveDownload[]>([])
   const [selectedSdls, setSelectedSdls] = useState<{ [key: string]: boolean }>(
     {}
   )
@@ -143,20 +146,22 @@ export default function DownloadDialog({
     message: '',
     notEnoughDiskSpace: false,
     validPath: true,
+    validFlatpakPath: true,
     spaceLeftAfter: ''
   })
+
+  const anticheatInfo = hasAnticheatInfo(gameInfo)
 
   const { i18n, t } = useTranslation('gamepage')
   const { t: tr } = useTranslation()
 
-  const sdls: SelectiveDownload[] | undefined = SDL_GAMES[appName]
-  const haveSDL = Array.isArray(sdls) && sdls.length !== 0
+  const haveSDL = sdls.length > 0
 
   const sdlList = useMemo(() => {
     const list = []
-    if (sdls) {
+    if (haveSDL) {
       for (const sdl of sdls) {
-        if (sdl.mandatory || selectedSdls[getUniqueKey(sdl)]) {
+        if (sdl.required || selectedSdls[getUniqueKey(sdl)]) {
           if (Array.isArray(sdl.tags)) {
             list.push(...sdl.tags)
           }
@@ -165,6 +170,16 @@ export default function DownloadDialog({
     }
     return list
   }, [selectedSdls, sdls])
+
+  useEffect(() => {
+    async function get() {
+      const branchPassword = await window.api.getPrivateBranchPassword(
+        gameInfo.app_name
+      )
+      setSavedBranchPassword(branchPassword)
+    }
+    get()
+  }, [])
 
   const handleSdl = useCallback(
     (sdl: SelectiveDownload, value: boolean) => {
@@ -176,11 +191,62 @@ export default function DownloadDialog({
     [selectedSdls]
   )
 
-  function handleDlcs() {
-    setInstallDlcs(!installDlcs)
+  async function confirmInstallBrokenAnticheat(path?: string) {
+    const { allowInstallationBrokenAnticheat } =
+      await window.api.requestAppSettings()
+    const title = t(
+      'install.anticheat-warning.title',
+      'Anticheat Broken/Denied'
+    )
+    if (allowInstallationBrokenAnticheat) {
+      showDialogModal({
+        title,
+        message: t(
+          'install.anticheat-warning.multiplayer_message',
+          'The anticheat support is broken or denied. The game may open but the multiplayer features will not work. Do you want to install it anyway?'
+        ),
+        buttons: [
+          {
+            text: t(
+              'install.anticheat-warning.install_anyway',
+              'Yes (I understand the multiplayer features will not work)'
+            ),
+            onClick: async () => handleInstall(path, true)
+          },
+          {
+            text: t('install.anticheat-warning.cancel', 'No'),
+            onClick: () => null
+          }
+        ]
+      })
+    } else {
+      showDialogModal({
+        title,
+        message: t(
+          'install.anticheat-warning.disabled_installation',
+          'The anticheat support is broken or denied and the multiplayer features will not work. The game cannot be installed. To install this game, disable this check in the advanced settings.'
+        ),
+        buttons: [
+          {
+            text: t('install.anticheat-warning.ok', 'Ok'),
+            onClick: () => null
+          }
+        ]
+      })
+    }
   }
 
-  async function handleInstall(path?: string) {
+  async function handleInstall(path?: string, ignoreAnticheat = false) {
+    if (
+      anticheatInfo &&
+      ['Denied', 'Broken', 'Unknown'].includes(anticheatInfo.status)
+    ) {
+      if (!ignoreAnticheat) {
+        confirmInstallBrokenAnticheat(path)
+        return
+      }
+    }
+
     backdropClick()
 
     // Write Default game config with prefix on linux
@@ -208,48 +274,108 @@ export default function DownloadDialog({
       progress: previousProgress,
       t,
       sdlList,
-      installDlcs,
+      installDlcs: dlcsToInstall,
       installLanguage,
       platformToInstall,
+      build: selectedBuild,
+      branch,
       showDialogModal: () => backdropClick()
     })
   }
 
   useEffect(() => {
-    const getIinstInfo = async () => {
+    const getInstInfo = async () => {
       try {
+        const fetchedPlatform = platformToInstall
+        const fetchedBuild = selectedBuild
         setGettingInstallInfo(true)
         const gameInstallInfo = await getInstallInfo(
           appName,
           runner,
-          platformToInstall
+          platformToInstall,
+          selectedBuild,
+          branch
         )
+
+        if (
+          gameInstallInfo?.manifest.disk_size === 0 &&
+          gameInstallInfo.manifest.download_size === 0
+        ) {
+          showDialogModal({
+            showDialog: true,
+            title: t(
+              'label.game.not-installable-game',
+              'Game is NOT Installable'
+            ),
+            message: t(
+              'status.gog-goodie',
+              "This game doesn't appear to be installable. Check downloadable content on https://gog.com/account"
+            ),
+            buttons: [
+              {
+                text: tr('box.ok')
+              }
+            ],
+            type: 'MESSAGE'
+          })
+          backdropClick()
+          return
+        }
+
         setGameInstallInfo(gameInstallInfo)
         setGettingInstallInfo(false)
 
+        // Prevent condition when user changes the platform before we reach this point
         if (
-          gameInstallInfo &&
-          gameInstallInfo.manifest &&
-          'languages' in gameInstallInfo.manifest
+          platformToInstall !== fetchedPlatform ||
+          fetchedBuild !== selectedBuild
         ) {
-          setInstallLanguages(gameInstallInfo.manifest.languages)
-          setInstallLanguage(
-            getInstallLanguage(
-              gameInstallInfo.manifest.languages,
-              i18n.languages
-            )
-          )
+          return
+        }
+        setDlcsToInstall(
+          (gameInstallInfo?.game.owned_dlc || []).map((dlc) => dlc.app_name)
+        )
+        if (gameInstallInfo && gameInstallInfo.manifest) {
+          setDiskSize(gameInstallInfo.manifest?.disk_size ?? 0)
         }
 
-        if (platformToInstall === 'linux' && runner === 'gog') {
-          setGettingInstallInfo(true)
-          const installer_languages =
-            await window.api.getGOGLinuxInstallersLangs(appName)
-          setInstallLanguages(installer_languages)
-          setInstallLanguage(
-            getInstallLanguage(installer_languages, i18n.languages)
-          )
-          setGettingInstallInfo(false)
+        if (gameInstallInfo) {
+          if (
+            gameInstallInfo.manifest &&
+            'builds' in gameInstallInfo.manifest
+          ) {
+            const builds = (gameInstallInfo.manifest.builds || [])
+              .filter(
+                // We either take branch when both are falsy (null | undefined)
+                // or when they are equal
+                (build) => (!branch && !build.branch) || build.branch === branch
+              )
+              .sort(
+                (a, b) =>
+                  new Date(b.date_published).getTime() -
+                  new Date(a.date_published).getTime()
+              )
+            setBuilds(builds)
+          }
+
+          if (
+            gameInstallInfo.manifest &&
+            'languages' in gameInstallInfo.manifest
+          ) {
+            setInstallLanguages(gameInstallInfo.manifest.languages.sort())
+            if (!gameInstallInfo.manifest.languages.includes(installLanguage)) {
+              setInstallLanguage(
+                getPreferredInstallLanguage(
+                  gameInstallInfo.manifest.languages,
+                  i18n.languages
+                )
+              )
+            }
+          }
+
+          if (gameInstallInfo.manifest && 'branches' in gameInstallInfo.game) {
+            setBranches(gameInstallInfo.game.branches || [])
+          }
         }
       } catch (error) {
         showDialogModal({
@@ -262,44 +388,86 @@ export default function DownloadDialog({
         return
       }
     }
-    getIinstInfo()
-  }, [appName, i18n.languages, platformToInstall])
+    getInstInfo()
+  }, [
+    appName,
+    i18n.languages,
+    platformToInstall,
+    selectedBuild,
+    branch,
+    savedBranchPassword
+  ])
+
+  useEffect(() => {
+    const getGameSdl = async () => {
+      if (runner === 'legendary') {
+        const { sdl_config } = await window.api.getGameOverride()
+        if (sdl_config && sdl_config[appName]) {
+          const sdl = await window.api.getGameSdl(appName)
+          if (sdl.length > 0) {
+            setSdls(sdl)
+          }
+        }
+      }
+    }
+    getGameSdl()
+  }, [appName, runner])
 
   useEffect(() => {
     const getSpace = async () => {
-      const { message, free, validPath } = await window.api.checkDiskSpace(
-        installPath
-      )
-      if (gameInstallInfo?.manifest?.disk_size) {
-        let notEnoughDiskSpace = free < gameInstallInfo.manifest.disk_size
-        let spaceLeftAfter = size(
-          free - Number(gameInstallInfo.manifest.disk_size)
-        )
+      const { message, free, validPath, validFlatpakPath } =
+        await window.api.checkDiskSpace(installPath)
+      if (diskSize) {
+        let notEnoughDiskSpace = free < diskSize
+        let spaceLeftAfter = size(free - Number(diskSize))
         if (previousProgress.folder === installPath) {
           const progress = 100 - getProgress(previousProgress)
-          notEnoughDiskSpace =
-            free < (progress / 100) * Number(gameInstallInfo.manifest.disk_size)
+          notEnoughDiskSpace = free < (progress / 100) * diskSize
 
-          spaceLeftAfter = size(
-            free - (progress / 100) * Number(gameInstallInfo.manifest.disk_size)
-          )
+          spaceLeftAfter = size(free - (progress / 100) * diskSize)
         }
 
         setSpaceLeft({
           message,
           notEnoughDiskSpace,
           validPath,
+          validFlatpakPath,
           spaceLeftAfter
         })
       }
     }
     getSpace()
-  }, [installPath, gameInstallInfo?.manifest?.disk_size])
+  }, [installPath, diskSize])
 
   const haveDLCs =
     gameInstallInfo && gameInstallInfo?.game?.owned_dlc?.length > 0
-  const DLCList = gameInstallInfo?.game?.owned_dlc
-  const downloadSize = () => {
+  const DLCList: Array<GOGDLCInfo | LegendaryDLCInfo> =
+    gameInstallInfo?.game?.owned_dlc ?? []
+
+  const downloadSize = useMemo(() => {
+    if (
+      gameInstallInfo &&
+      'perLangSize' in gameInstallInfo.manifest &&
+      gameInstallInfo.manifest.perLangSize
+    ) {
+      const languageSize =
+        gameInstallInfo?.manifest?.perLangSize[installLanguage]
+          ?.download_size ?? 0
+      const universalSize =
+        gameInstallInfo?.manifest?.perLangSize['*']?.download_size ?? 0
+
+      const dlcSize = DLCList.reduce((acc, dlc) => {
+        if (dlcsToInstall.includes(dlc.app_name) && 'perLangSize' in dlc) {
+          const languageSize =
+            dlc.perLangSize[installLanguage]?.download_size ?? 0
+          const universalSize = dlc.perLangSize['*']?.download_size ?? 0
+          acc += languageSize + universalSize
+        }
+        return acc
+      }, 0 as number)
+
+      return size(languageSize + universalSize + dlcSize)
+    }
     if (gameInstallInfo?.manifest?.download_size) {
       if (previousProgress.folder === installPath) {
         const progress = 100 - getProgress(previousProgress)
@@ -311,31 +479,44 @@ export default function DownloadDialog({
       return size(Number(gameInstallInfo?.manifest?.download_size))
     }
     return ''
-  }
+  }, [installPath, gameInstallInfo, installLanguage, dlcsToInstall])
 
-  const installSize =
-    gameInstallInfo?.manifest?.disk_size &&
-    size(Number(gameInstallInfo?.manifest?.disk_size))
-
-  const getLanguageName = useMemo(() => {
-    return (language: string) => {
-      try {
-        const locale = language.replace('_', '-')
-        const displayNames = new Intl.DisplayNames(
-          [locale, ...i18n.languages, 'en'],
-          {
-            type: 'language',
-            style: 'long'
-          }
-        )
-        return displayNames.of(locale)
-      } catch (e) {
-        return language
-      }
+  const installSize = useMemo(() => {
+    if (
+      gameInstallInfo &&
+      'perLangSize' in gameInstallInfo.manifest &&
+      gameInstallInfo.manifest.perLangSize
+    ) {
+      const languageSize =
+        gameInstallInfo?.manifest?.perLangSize[installLanguage]?.disk_size ?? 0
+      const universalSize =
+        gameInstallInfo?.manifest?.perLangSize['*']?.disk_size ?? 0
+      const dlcSize = DLCList.reduce((acc, dlc) => {
+        if (dlcsToInstall.includes(dlc.app_name) && 'perLangSize' in dlc) {
+          const languageSize = dlc.perLangSize[installLanguage]?.disk_size ?? 0
+          const universalSize = dlc.perLangSize['*']?.disk_size ?? 0
+          acc += languageSize + universalSize
+        }
+        return acc
+      }, 0)
+      setDiskSize(languageSize + universalSize + dlcSize)
+      return size(languageSize + universalSize + dlcSize)
     }
-  }, [i18n.languages, platformToInstall])
 
-  const { validPath, notEnoughDiskSpace, message, spaceLeftAfter } = spaceLeft
+    if (gameInstallInfo?.manifest?.disk_size) {
+      return size(Number(gameInstallInfo?.manifest?.disk_size))
+    }
+
+    return ''
+  }, [gameInstallInfo, installLanguage, platformToInstall, dlcsToInstall])
+
+  const {
+    validPath,
+    validFlatpakPath,
+    notEnoughDiskSpace,
+    message,
+    spaceLeftAfter
+  } = spaceLeft
   const title = gameInfo?.title
 
   function getInstallLabel() {
@@ -352,9 +533,10 @@ export default function DownloadDialog({
   }
 
   const readyToInstall =
-    installPath &&
-    gameInstallInfo?.manifest?.download_size &&
-    !gettingInstallInfo
+    installPath && !!diskSize && !gettingInstallInfo && validFlatpakPath
+
+  const showDlcSelector =
+    ['legendary', 'gog'].includes(runner) && DLCList && DLCList?.length > 0
 
   return (
     <>
@@ -368,22 +550,22 @@ export default function DownloadDialog({
           />
         ))}
       </DialogHeader>
-      {gameInfo && <Anticheat gameInfo={gameInfo} />}
+      <Anticheat anticheatInfo={anticheatInfo} />
       <DialogContent>
         <div className="InstallModal__sizes">
           <div className="InstallModal__size">
             <FontAwesomeIcon
               className={classNames('InstallModal__sizeIcon', {
-                'fa-spin-pulse': !downloadSize()
+                'fa-spin-pulse': !downloadSize
               })}
-              icon={downloadSize() ? faDownload : faSpinner}
+              icon={downloadSize ? faDownload : faSpinner}
             />
-            {downloadSize() ? (
+            {downloadSize ? (
               <>
                 <div className="InstallModal__sizeLabel">
                   {t('game.downloadSize', 'Download Size')}:
                 </div>
-                <div className="InstallModal__sizeValue">{downloadSize()}</div>
+                <div className="InstallModal__sizeValue">{downloadSize}</div>
               </>
             ) : (
               `${t('game.getting-download-size', 'Geting download size')}...`
@@ -392,11 +574,11 @@ export default function DownloadDialog({
           <div className="InstallModal__size">
             <FontAwesomeIcon
               className={classNames('InstallModal__sizeIcon', {
-                'fa-spin-pulse': !downloadSize()
+                'fa-spin-pulse': !downloadSize
               })}
-              icon={downloadSize() ? faHardDrive : faSpinner}
+              icon={downloadSize ? faHardDrive : faSpinner}
             />
-            {downloadSize() ? (
+            {downloadSize ? (
               <>
                 <div className="InstallModal__sizeLabel">
                   {t('game.installSize', 'Install Size')}:
@@ -423,42 +605,28 @@ export default function DownloadDialog({
           )}
         </div>
         {installLanguages && installLanguages?.length > 1 && (
-          <SelectField
-            label={`${t('game.language', 'Language')}:`}
-            htmlId="languagePick"
-            value={installLanguage}
-            onChange={(e) => setInstallLanguage(e.target.value)}
-          >
-            {installLanguages &&
-              installLanguages.map((value) => (
-                <option value={value} key={value}>
-                  {getLanguageName(value)}
-                </option>
-              ))}
-          </SelectField>
+          <GameLanguageSelector
+            installPlatform={platformToInstall}
+            installLanguage={installLanguage}
+            setInstallLanguage={setInstallLanguage}
+            installLanguages={installLanguages}
+          />
         )}
 
-        <TextInputWithIconField
+        <PathSelectionBox
+          type="directory"
+          onPathChange={setInstallPath}
+          path={installPath}
+          placeholder={getDefaultInstallPath()}
+          pathDialogTitle={t('install.path')}
+          pathDialogDefaultPath={getDefaultInstallPath()}
           htmlId="setinstallpath"
           label={t('install.path', 'Select Install Path')}
-          placeholder={defaultInstallPath}
-          value={installPath.replaceAll("'", '')}
-          onChange={(event) => setInstallPath(event.target.value)}
-          icon={<FontAwesomeIcon icon={faFolderOpen} />}
-          onIconClick={async () =>
-            window.api
-              .openDialog({
-                buttonLabel: t('box.choose'),
-                properties: ['openDirectory'],
-                title: t('install.path'),
-                defaultPath: defaultInstallPath
-              })
-              .then((path) => setInstallPath(path || defaultInstallPath))
-          }
+          noDeleteButton
           afterInput={
-            gameInstallInfo?.manifest?.download_size ? (
+            downloadSize ? (
               <span className="smallInputInfo">
-                {validPath && (
+                {validPath && validFlatpakPath && (
                   <>
                     <span>
                       {`${t('install.disk-space-left', 'Space Available')}: `}
@@ -489,6 +657,14 @@ export default function DownloadDialog({
                     )}`}
                   </span>
                 )}
+                {validPath && !validFlatpakPath && (
+                  <span className="error">
+                    {`${t(
+                      'install.flatpak-path-not-writtable',
+                      'Error: Sandbox access not granted to this path, data loss will occur.'
+                    )}`}
+                  </span>
+                )}
                 {validPath && notEnoughDiskSpace && (
                   <span className="warning">
                     {` (${t(
@@ -501,7 +677,31 @@ export default function DownloadDialog({
             ) : null
           }
         />
-        {children}
+
+        {platformToInstall !== 'linux' && branches.length > 1 && (
+          <div>
+            <BranchSelector
+              appName={gameInfo.app_name}
+              branches={branches}
+              branch={branch}
+              setBranch={setBranch}
+              savedBranchPassword={savedBranchPassword}
+              onPasswordChange={(newPasswd) =>
+                setSavedBranchPassword(newPasswd)
+              }
+            />
+          </div>
+        )}
+
+        {platformToInstall !== 'linux' && !!gameBuilds.length && (
+          <div>
+            <BuildSelector
+              gameBuilds={gameBuilds}
+              selectedBuild={selectedBuild}
+              setSelectedBuild={setSelectedBuild}
+            />
+          </div>
+        )}
         {(haveDLCs || haveSDL) && (
           <div className="InstallModal__sectionHeader">
             {t('sdl.title', 'Select components to Install')}:
@@ -517,31 +717,23 @@ export default function DownloadDialog({
                 <ToggleSwitch
                   htmlId={`sdls-${idx}`}
                   title={sdl.name}
-                  value={!!sdl.mandatory || !!selectedSdls[getUniqueKey(sdl)]}
-                  disabled={sdl.mandatory}
+                  extraClass="InstallModal__toggle--sdl"
+                  value={!!sdl.required || !!selectedSdls[getUniqueKey(sdl)]}
+                  disabled={sdl.required}
                   handleChange={(e) => handleSdl(sdl, e.target.checked)}
                 />
-                <span>{sdl.name}</span>
               </label>
             ))}
           </div>
         )}
-        {haveDLCs && (
-          <div className="InstallModal__dlcs">
-            <label className={classNames('InstallModal__toggle toggleWrapper')}>
-              <ToggleSwitch
-                htmlId="dlcs"
-                value={installDlcs}
-                handleChange={() => handleDlcs()}
-                title={t('dlc.installDlcs', 'Install all DLCs')}
-              />
-              <span>{t('dlc.installDlcs', 'Install all DLCs')}:</span>
-            </label>
-            <div className="InstallModal__dlcsList">
-              {DLCList?.map(({ title }) => title).join(', ')}
-            </div>
-          </div>
+        {showDlcSelector && (
+          <DLCDownloadListing
+            DLCList={DLCList}
+            dlcsToInstall={dlcsToInstall}
+            setDlcsToInstall={setDlcsToInstall}
+          />
         )}
+        {children}
       </DialogContent>
       <DialogFooter>
         <button
