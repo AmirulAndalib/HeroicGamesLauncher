@@ -4,11 +4,12 @@ import {
   GameInfo,
   InstallProgress,
   Runner,
-  UpdateParams
+  UpdateParams,
+  LaunchOption
 } from 'common/types'
 
-import { TFunction } from 'react-i18next'
-import { getGameInfo, sendKill } from './index'
+import { TFunction } from 'i18next'
+import { getGameInfo } from './index'
 import { DialogModalOptions } from 'frontend/types'
 
 const storage: Storage = window.localStorage
@@ -19,13 +20,15 @@ type InstallArgs = {
   isInstalling: boolean
   previousProgress: InstallProgress | null
   progress: InstallProgress
+  installDlcs?: Array<string>
+  t: TFunction<'gamepage'>
+  showDialogModal: (options: DialogModalOptions) => void
   setInstallPath?: (path: string) => void
   platformToInstall?: InstallPlatform
-  t: TFunction<'gamepage'>
-  installDlcs?: boolean
   sdlList?: Array<string>
   installLanguage?: string
-  showDialogModal: (options: DialogModalOptions) => void
+  build?: string
+  branch?: string
 }
 
 async function install({
@@ -37,9 +40,11 @@ async function install({
   previousProgress,
   setInstallPath,
   sdlList = [],
-  installDlcs = false,
+  installDlcs = [],
   installLanguage = 'en-US',
   platformToInstall = 'Windows',
+  build,
+  branch,
   showDialogModal
 }: InstallArgs) {
   if (!installPath) {
@@ -53,7 +58,7 @@ async function install({
     if (!folder_name) return
     return handleStopInstallation(
       appName,
-      [installPath, folder_name],
+      installPath,
       t,
       progress,
       runner,
@@ -70,9 +75,11 @@ async function install({
       await window.api.requestAppSettings()
     const args: Electron.OpenDialogOptions = {
       buttonLabel: t('gamepage:box.choose'),
-      properties: ['openDirectory'],
+      properties:
+        platformToInstall === 'Mac' ? ['openFile'] : ['openDirectory'],
       title: t('gamepage:box.importpath'),
       defaultPath: defaultInstallPath
+      //TODO: add file filters
     }
     const path = await window.api.openDialog(args)
 
@@ -80,7 +87,12 @@ async function install({
       return
     }
 
-    return importGame({ appName, path, runner, platform: platformToInstall })
+    return window.api.importGame({
+      appName,
+      path,
+      runner,
+      platform: platformToInstall
+    })
   }
 
   if (installPath !== 'default') {
@@ -106,15 +118,15 @@ async function install({
     installLanguage,
     runner,
     platformToInstall,
-    gameInfo
+    gameInfo,
+    build,
+    branch
   })
 }
 
-const importGame = window.api.importGame
-
 async function handleStopInstallation(
   appName: string,
-  [path, folderName]: string[],
+  path: string,
   t: TFunction<'gamepage'>,
   progress: InstallProgress,
   runner: Runner,
@@ -132,15 +144,14 @@ async function handleStopInstallation(
             appName,
             JSON.stringify({ ...progress, folder: path })
           )
-          sendKill(appName, runner)
+          window.api.cancelDownload(false)
         }
       },
       {
         text: t('box.no'),
         onClick: async () => {
-          await sendKill(appName, runner)
+          window.api.cancelDownload(true)
           storage.removeItem(appName)
-          window.api.removeFolder([path, folderName])
         }
       }
     ]
@@ -153,20 +164,22 @@ const repair = async (appName: string, runner: Runner): Promise<void> =>
 type LaunchOptions = {
   appName: string
   t: TFunction<'gamepage'>
-  launchArguments?: string
+  launchArguments?: LaunchOption
   runner: Runner
   hasUpdate: boolean
   showDialogModal: (options: DialogModalOptions) => void
+  args?: string[]
 }
 
 const launch = async ({
   appName,
   t,
-  launchArguments = '',
+  launchArguments,
   runner,
   hasUpdate,
-  showDialogModal
-}: LaunchOptions): Promise<{ status: 'done' | 'error' }> => {
+  showDialogModal,
+  args
+}: LaunchOptions): Promise<{ status: 'done' | 'error' | 'abort' }> => {
   if (hasUpdate) {
     const { ignoreGameUpdates } = await window.api.requestGameSettings(appName)
 
@@ -174,47 +187,53 @@ const launch = async ({
       return window.api.launch({
         appName,
         runner,
-        launchArguments: runner === 'legendary' ? '--skip-version-check' : ''
+        launchArguments,
+        args,
+        skipVersionCheck: true
       })
     }
 
     // promisifies the showDialogModal button click callbacks
-    const launchFinished = new Promise<{ status: 'done' | 'error' }>((res) => {
-      showDialogModal({
-        message: t('gamepage:box.update.message'),
-        title: t('gamepage:box.update.title'),
-        buttons: [
-          {
-            text: t('gamepage:box.yes'),
-            onClick: async () => {
-              const gameInfo = await getGameInfo(appName, runner)
-              if (gameInfo && gameInfo.runner !== 'sideload') {
-                updateGame({ appName, runner, gameInfo })
-                res({ status: 'done' })
+    const launchFinished = new Promise<{ status: 'done' | 'error' | 'abort' }>(
+      (res) => {
+        showDialogModal({
+          message: t('gamepage:box.update.message'),
+          title: t('gamepage:box.update.title'),
+          buttons: [
+            {
+              text: t('gamepage:box.yes'),
+              onClick: async () => {
+                const gameInfo = await getGameInfo(appName, runner)
+                if (gameInfo && gameInfo.runner !== 'sideload') {
+                  updateGame({ appName, runner, gameInfo })
+                  res({ status: 'done' })
+                }
+                res({ status: 'error' })
               }
-              res({ status: 'error' })
+            },
+            {
+              text: t('box.no'),
+              onClick: async () => {
+                res(
+                  window.api.launch({
+                    appName,
+                    runner,
+                    launchArguments,
+                    args,
+                    skipVersionCheck: true
+                  })
+                )
+              }
             }
-          },
-          {
-            text: t('box.no'),
-            onClick: async () => {
-              res(
-                window.api.launch({
-                  appName,
-                  runner,
-                  launchArguments: '--skip-version-check'
-                })
-              )
-            }
-          }
-        ]
-      })
-    })
+          ]
+        })
+      }
+    )
 
     return launchFinished
   }
 
-  return window.api.launch({ appName, launchArguments, runner })
+  return window.api.launch({ appName, launchArguments, runner, args })
 }
 
 const updateGame = (args: UpdateParams) => {
@@ -224,12 +243,6 @@ const updateGame = (args: UpdateParams) => {
 export const epicCategories = ['all', 'legendary', 'epic']
 export const gogCategories = ['all', 'gog']
 export const sideloadedCategories = ['all', 'sideload']
+export const amazonCategories = ['all', 'nile', 'amazon']
 
-export {
-  handleStopInstallation,
-  install,
-  launch,
-  repair,
-  //updateAllGames,
-  updateGame
-}
+export { handleStopInstallation, install, launch, repair, updateGame }

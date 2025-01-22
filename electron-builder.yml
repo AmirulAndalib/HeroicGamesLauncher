@@ -1,0 +1,87 @@
+appId: com.heroicgameslauncher.hgl
+productName: Heroic
+afterSign: sign/afterSign.js
+files:
+  - build/**/*
+  - node_modules/**/*
+  - '!build/bin/*'
+  - build/bin/legendary.LICENSE
+
+asarUnpack:
+  - build/icon.png
+  - build/icon.icns
+  - build/win_icon.ico
+  - build/icon-dark.png
+  - build/icon-light.png
+  - build/webviewPreload.js
+  - build/bin/**/*
+  - '!build/bin/legendary.LICENSE'
+
+protocols:
+  - name: heroic
+    schemes:
+      - heroic
+
+win:
+  artifactName: ${productName}-${version}-Setup-${arch}.${ext}
+  icon: build/win_icon.ico
+  files: build/bin/*/win32/*
+
+portable:
+  artifactName: ${productName}-${version}-Portable-${arch}.${ext}
+
+mac:
+  artifactName: ${productName}-${version}-macOS-${arch}.${ext}
+  category: public.app-category.games
+  icon: build/icon.icns
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize:
+    teamId: DLB2RYLUDX
+  extendInfo:
+    com.apple.security.cs.allow-jit: true
+  files:
+    - build/bin/*/darwin/*
+    - build/bin/x64/win32/GalaxyCommunication.exe
+
+dmg:
+  background: public/dmg.png
+  window:
+    width: 600
+    height: 500
+  contents:
+    - x: 10
+      y: 215
+      type: file
+    - x: 420
+      y: 215
+      type: link
+      path: /Applications
+
+linux:
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  category: Game
+  icon: build/icon.icns
+  desktop:
+    Name: Heroic Games Launcher
+    Comment[de]: Ein OSS-Spielelauncher für GOG, Epic Games und Amazon Games
+    Comment[pl]: Otwartoźródłowy launcher dla GOG, Epic Games i Amazon Games
+  files:
+    - build/bin/*/linux/*
+    - build/bin/x64/win32/GalaxyCommunication.exe
+
+rpm:
+  fpm: ['--rpm-rpmbuild-define', '_build_id_links none']
+
+snap:
+  base: core20
+  confinement: strict
+  grade: stable
+  category: Games
+  synopsis: An Open Source Launcher for GOG Amazon and Epic Games
+  description: Heroic is an Open Source Games Launcher. Right now it supports launching games from the Epic Games Store using Legendary Amazon Games using Nile and GOG Games using our custom implementations Nile and gogdl.
+  publish:
+    provider: snapStore
+    channels:
+      - edge
+    repo: heroic

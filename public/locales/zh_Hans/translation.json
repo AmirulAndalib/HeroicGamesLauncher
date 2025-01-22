@@ -1,11 +1,15 @@
 {
     "accessibility": {
-        "actions_font_family_no_default": "操作菜单字族 （默认： ",
+        "actions_font_family_no_default": "操作菜单字族 （默认)：",
         "all_tiles_in_color": "对所有游戏磁贴着色",
         "content_font_family_no_default": "内容字族 （默认： ",
         "fonts": "字体",
         "title": "辅助功能",
-        "zoom": "缩放"
+        "zoom": "缩放",
+        "disable_dialog_backdrop_close": "在对话框外单击禁用关闭对话框",
+        "titles_always_visible": "始终在游戏库中显示标题",
+        "actions_font_family_default": "操作字族（默认：{{fontFamily}}）",
+        "content_font_family_default": "内容字族（默认：{{fontFamily}}）"
     },
     "add_game": "添加游戏",
     "All": "全部",
@@ -15,7 +19,8 @@
         "reference": "引用",
         "source": "来源",
         "status": "状态",
-        "title": "此游戏包含反作弊软件"
+        "title": "此游戏包含反作弊软件",
+        "multiplayer_may_not_work": "由于被拒绝或损坏的反作弊支持，多玩家功能可能不会正常工作。"
     },
     "box": {
         "cache-cleared": {
@@ -56,7 +61,7 @@
                 "title": "游戏文件夹似乎已被删除，你是否要从安装列表中删除游戏？"
             },
             "generic": {
-                "message": "",
+                "message": "一般错误信息",
                 "title": "选择要运行的 EXE"
             },
             "launchAborted": "启动已中断",
@@ -78,7 +83,14 @@
                 "message": "Winetricks 在执行期间返回了以下错误：{{newLine}}{{error}}",
                 "title": "Winetricks 错误"
             },
-            "moving": "移动游戏出错 {{error}}"
+            "moving": "移动游戏出错 {{error}}",
+            "ubisoft-connect": {
+                "message": "在游戏前缀中安装 Ubisoft Connect 失败。查看我们的 wiki 页面 https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac 来手动安装它。",
+                "title": "Ubisoft Connect"
+            },
+            "legendary": {
+                "generic": "发生了错误！尝试注销并登录您的 Epic 帐户。 {{newline}} {{error}}"
+            }
         },
         "info": {
             "update": {
@@ -112,7 +124,8 @@
         },
         "select": {
             "button": "选择",
-            "exe": "选择 EXE"
+            "exe": "选择 EXE",
+            "script": "选择脚本…"
         },
         "shortcuts": {
             "message": "桌面与开始菜单快捷方式已创建",
@@ -143,13 +156,28 @@
             },
             "title": "警告",
             "wine-change": {
-                "message": "我们找不到启动此标题的选定 wine 版本 ({{selectedWine}})。 {{newline}} 我们找到了另一个，你想继续使用 {{foundWine}} 启动吗？",
-                "title": "找不到酒！"
+                "message": "我们找不到启动此游戏的选定 wine 版本 ({{selectedWine}})。 {{newline}} 我们找到了另一个，你想继续使用 {{foundWine}} 启动吗？",
+                "title": "未找到 Wine ！"
+            },
+            "sideload": {
+                "confirmExit": {
+                    "message": "可能会丢失任何未保存的进度",
+                    "title": "你确定要退出吗？"
+                }
+            },
+            "snap": {
+                "checkbox": "不再显示本消息",
+                "title": "Heroic 正以 Snap 运行",
+                "message": "某些功能眼下在本应用的 Snap 版本中不可用，我们正尝试修复它。{{newLine}}当前限制为：{{newLine}}Heroic 无法从 Steam 找到 Proton 或从 Lutris 找到 Wine。{{newLine}}{{newLine}}Gamescope、GameMode 和 MangoHud 也无法正常工作，因为 Heroci 无法有权限访问它们。{{newLine}}{{newLine}}要访问此功能，请以 Flakpak、DEB 格式包安装 Heroic 或从 AppImage 安装。"
             }
         },
         "wineprefix": "选择 Wine Prefix 文件夹",
         "yes": "是",
-        "dontShowAgain": "不再显示"
+        "dontShowAgain": "不再显示",
+        "choose-nile-binary": "选择 Nile 二进制文件",
+        "changelog": "更改记录",
+        "postpone": "延迟",
+        "update": "更新"
     },
     "button": {
         "cancel": "取消",
@@ -183,21 +211,22 @@
     "docs": "文档",
     "download-manager": {
         "install-type": {
-            "install": "Install",
-            "update": "Update"
+            "install": "安装",
+            "update": "更新"
         },
         "label": {
             "disk": "磁盘",
             "speed": "下载"
         },
-        "link": "Downloads",
+        "link": "下载",
         "queue": {
             "end-time": "完成于",
             "queue-time": "添加于",
             "start-time": "启动于",
-            "type": "Type"
+            "type": "类型"
         },
-        "title": "Downloads"
+        "title": "下载",
+        "ETA": "预计时间"
     },
     "epic": {
         "offline-notification-body": "在线服务可能无法完全工作，因为 Epic Games 服务器离线！",
@@ -209,7 +238,8 @@
     "game": {
         "status": "状态",
         "store": "商店",
-        "title": "游戏标题"
+        "title": "游戏标题",
+        "modify": "修改安装"
     },
     "generic": {
         "error": {
@@ -230,7 +260,18 @@
         "show_available_games": "显示不可用的游戏",
         "show_favourites_only": "仅显示最爱",
         "show_hidden": "显示隐藏项",
-        "store": "过滤商店"
+        "store": "过滤商店",
+        "filters": "筛选",
+        "show_installed_only": "只显示已安装的游戏",
+        "all_categories": "所有分类",
+        "uncategorized": "未分类",
+        "select_all": "全选",
+        "only": "仅",
+        "reset": "重置",
+        "no_categories": "无自定义分类。使用每个游戏菜单添加分类。",
+        "categories": "分类",
+        "show_support_offline_only": "只显示支持离线玩的游戏",
+        "show_third_party_managed_only": "只显示受第三方管理的游戏"
     },
     "help": {
         "amdfsr": "AMD 的 FSR 通过在全屏模式下提高较低分辨率来提高帧率。图像质量从 5 提高到 1，但代价是性能稍有下降。启用可能会提高性能。",
@@ -266,11 +307,48 @@
             "part3": "手动同步：选择下载以下载存储在云端的存档。选择上传将会把本地存档上传到云端。强制下载将会忽略本地版本，强制上传将会忽略云端版本。",
             "part4": "自动同步将在你每次开始游戏时和结束游戏后同步存档。"
         },
-        "vkd3d": "VKD3D 是一个基于 Vulkan 的转换层，用于 DirectX 12 游戏。启用可能会显著提高兼容性。对老的 DirectX 游戏没有效果。",
+        "vkd3d": "VKD3D 是一个基于 Vulkan 的转换层，用于 DirectX 12 游戏。启用可能会显著提高兼容性。对老的 DirectX 游戏没有效果。它需要 DXVK。",
         "wine": {
             "part1": "Heroic 启动器会在以下文件夹中查找现有的 Wine/Proton/CrossOver：",
             "part2": "如果在其它位置，请使用软链接连接到这些中的一个文件夹"
-        }
+        },
+        "disable_logs": "将此复选框切换为“开”可禁用对日志文件的大部分写入（始终记录关键信息）。请确保在报告任何问题之前关闭此设置。",
+        "dxvknvapi": "DXVK-NVAPI 是基于 DXVK 和 linux 原生 NVAPI 构建的 NVAPI 的实现，它允许在 Nvidia GPU 上使用 DLSS。",
+        "disablePlaytimeSync": "停用与给定游戏商店服务器的游戏时间同步（当前只支持 GOG）",
+        "gamescope": {
+            "fpsLimiterNoFocus": "如未聚焦游戏，Gamescope 每秒应限制的帧率。",
+            "upscaleMethod": "Gamescope 应使用的分辨率提升方法。",
+            "gameWidth": "游戏所用的宽度分辨率。Gamescope 假定 16:9 长宽比。",
+            "upscaleWidth": "Gamescope 所用的宽度分辨率。假定 16:9 的长宽比。",
+            "gameHeight": "游戏所用的高度分辨率。Gamescope 假定 16:9 的长宽比。",
+            "upscaleHeight": "Gamescope 所用的高度分辨率。假定 16:9 长宽比。",
+            "fpsLimiter": "Gamescope 帧数限制，比如 60",
+            "additionalOptions": "要传递给 gamescope 的额外命令行标记。"
+        },
+        "content": {
+            "defaultInstallPath": "这是安装游戏时预先选择的默认路径。",
+            "settingsDefault": "显示 Heroic 的所有设置及游戏的默认值。",
+            "settingsGame": "显示游戏的全部设置。",
+            "downloadManager": "显示当前和过往下载。",
+            "wineManager": "安装不同版本的 Wine、Proton、Crossover 等。",
+            "library": "显示拥有的全部游戏。",
+            "customThemesPath": "查看我们的维基。",
+            "accessibility": "显示无障碍设置。",
+            "login": "登录到不同商店。"
+        },
+        "title": {
+            "accessibility": "无障碍",
+            "login": "登录",
+            "settings": "设置",
+            "downloadManager": "下载管理器",
+            "wineManager": "Wine 管理器",
+            "library": "库"
+        },
+        "button": {
+            "open": "打开帮助",
+            "close": "关闭帮助"
+        },
+        "msync": "Msync 旨在减少 wineserver 在 CPU 消耗巨大的游戏中的开销。开启它可能会改善受支持的 Linux 内核上的性能。"
     },
     "info": {
         "heroic": {
@@ -297,13 +375,15 @@
         "wine-repfix": {
             "message": "Wine 使用所谓的 WINEPREFIX 来封装 Windows 应用程序。这个前缀包含 Wine 配置文件和 C:(Windows操作系统上的主磁盘) 文件层次结构的副本。你的游戏保存文件和通过 winetricks 安装的依赖项存储在这个复制的 C:驱动器中。"
         },
-        "wine-path-invalid": "Wine Path 无效，请选择另一个。"
+        "wine-path-invalid": "Wine Path 无效，请选择另一个。",
+        "wine-path-none-found": "没有找到 Wine 版本，从 Wine Manager 下载一个"
     },
     "install": {
         "path": "选择安装路径"
     },
     "label": {
-        "loading": "加载中"
+        "loading": "加载中",
+        "releaseDate": "发行日期"
     },
     "library": {
         "refresh": "刷新",
@@ -324,7 +404,9 @@
         "alternative_method": "备选登录方式",
         "epic": "Epic Games 登录",
         "gog": "GOG 登录",
-        "message": "平台登录。你可以同时登录超过一个平台。"
+        "message": "登录您的平台。您可以同时登录多个平台。",
+        "amazon": "亚马逊登录",
+        "old-mac": "你的 macOS 版本是 {{version}}。需要 macOS 12 或以上版本才能登录。"
     },
     "message": {
         "sync": "同步完成",
@@ -357,7 +439,9 @@
             "error": "安装失败",
             "finished": "安装完成",
             "imported": "游戏已导入",
-            "startInstall": "安装已开始"
+            "startInstall": "安装已开始",
+            "paused": "安装暂停",
+            "failed": "安装失败"
         },
         "moved": "移动完成",
         "moving": "移动游戏中",
@@ -369,7 +453,9 @@
         "update": {
             "canceled": "已取消更新",
             "finished": "更新已完成",
-            "started": "更新已开始"
+            "started": "更新已开始",
+            "failed": "更新失败",
+            "paused": "更新暂停"
         }
     },
     "offline-message": {
@@ -379,7 +465,7 @@
         "offline-retry-in": "离线。在 {{seconds}} 秒内重试。",
         "retrying": "重试"
     },
-    "Open": "",
+    "Open": "打开",
     "options": {
         "advanced": {
             "key": "变量名称",
@@ -399,7 +485,11 @@
         },
         "gameargs": {
             "placeholder": "将启动器参数放在这里",
-            "title": "游戏参数（在命令后运行）："
+            "title": "游戏参数（在命令后运行）：",
+            "error": {
+                "command": "来自 Steam 的 %command% 语法不是有效的游戏变量。",
+                "env": "必须在下方表格中配置环境变量。"
+            }
         },
         "quote-args-with-spaces": "警告:请确保引用参数时使用空格！ 例：\"path/with spaces/\"",
         "wrapper": {
@@ -409,12 +499,28 @@
             "placeHolderKey": "新封装器",
             "placeHolderValue": "封装器参数",
             "title": "封装器命令："
+        },
+        "gamescope": {
+            "fpsLimiter": "FPS 限制程序",
+            "gameHeight": "游戏高度",
+            "upscaleWidth": "Upscale 宽度",
+            "gameWidth": "游戏宽度",
+            "upscaleHeight": "Upscale 高度",
+            "fpsLimiterNoFocus": "FPS 限制程序（无焦点）",
+            "nis": "NVIDIA 图形缩放（NIS）",
+            "borderless": "无边框",
+            "fullscreen": "全屏",
+            "interger": "整数型 Upscale",
+            "stretch": "拉伸图像",
+            "windowed": "已窗口化",
+            "additionalOptions": "额外选项"
         }
     },
     "other": {
         "gogdl-version": "GOGDL 版本： ",
         "legendary-version": "Legendary 版本： ",
-        "weblate": "帮助翻译 Heroic。"
+        "weblate": "帮助翻译 Heroic。",
+        "nile-version": "尼罗河版本： "
     },
     "Other": "Other",
     "placeholder": {
@@ -423,12 +529,14 @@
         "custom_themes_path": "选择查找自定义 CSS 文件的路径",
         "dxvkfpsvalue": "正整数值 (如30, 60, ...)",
         "egs-prefix": "Epic 游戏商城安装位置",
-        "prefered_language": "双字符代码 (如: \"en\" 或 \"fr\")"
+        "prefered_language": "双字符代码 (如: \"en\" 或 \"fr\")",
+        "alt-nile-bin": "使用内置 Nile 二进制文件..."
     },
     "platforms": {
         "linux": "Linux",
         "mac": "Mac",
-        "win": "Windows"
+        "win": "Windows",
+        "browser": "浏览器"
     },
     "please-wait": "请等待…",
     "progress": "Progress",
@@ -440,7 +548,9 @@
             "empty": "没有可下载的",
             "finished": "已完成",
             "queued": "已加入队列",
-            "remove": "从下载中删除"
+            "remove": "从下载中删除",
+            "pause": "暂停下载",
+            "resume": "恢复下载"
         }
     },
     "Recent": "最近玩过",
@@ -464,7 +574,7 @@
         "default-steam-path": "默认 Steam 路径",
         "defaultWinePrefix": "为新的 WinePrefix设置文件夹",
         "disable_controller": "使用控制器禁止 Heroic 导航",
-        "discordRPC": "启用Discord的Rich Presence（活动状态）",
+        "discordRPC": "启用 Discord 的 Rich Presence（活动状态）",
         "download-no-https": "不使用 HTTPS 下载游戏 (对 LanCache 等 CDN 有用)",
         "dxvkfpslimit": "限制 FPS (DX9、10 和 11)",
         "egs-sync": "与已安装的 Epic 游戏同步",
@@ -506,11 +616,48 @@
         "log": {
             "copy-to-clipboard": "复制日志内容到剪贴板",
             "current-log": "当前日志",
-            "instructions": "加入我们的 Discord，寻找与您的操作系统匹配的频道。共享此处显示的日志内容，并包含对问题的清晰描述以及任何相关信息和细节。",
+            "instructions": "加入我们的 Discord，并搜索 \"#-support\" 部分。阅读置顶的 \"Read Me First | Frequently Asked Questions\" 帖子并遵照指示分享这些日志文件及任何与你的问题相关的信息。",
             "instructions_title": "如何报告问题？",
             "last-log": "上一日志",
             "no-file": "未找到日志文件",
-            "show-in-folder": "显示文件夹中的日志文件"
+            "show-in-folder": "显示文件夹中的日志文件",
+            "join-heroic-discord": "加入我们的 Discord",
+            "upload": {
+                "button": "上传日志文件",
+                "done": {
+                    "title": "上传完毕",
+                    "content": "已上传到 {{url}}（URL 已复制到你的剪贴板）"
+                },
+                "no-files": "没有日志文件被上传",
+                "open": "打开已上传的日志文件",
+                "title": "日志标题",
+                "upload-date": "上传日期",
+                "uploading": {
+                    "title": "上传中",
+                    "content": "正在上传日志文件…"
+                },
+                "confirm": {
+                    "content": "你真想上传“{{name}}”吗？",
+                    "title": "上传日志文件？"
+                },
+                "error": {
+                    "content": "上传日志文件失败。详情请查看 Heroic 的常规日志",
+                    "title": "上传失败了"
+                },
+                "header": "已上传的日志文件",
+                "minutes-ago": "上传于 {{minutesAgo, relativetime(minutes)}} 分钟前",
+                "delete": "请求日志文件删除",
+                "hours-ago": "上传于{{hoursAgo, relativetime(hours)}}小时前",
+                "actions": "操作"
+            },
+            "descriptiveNames": {
+                "game-log": "{{gameTitle}}的游戏日志",
+                "gog": "GOG 日志",
+                "heroic": "常规 Heroic 日志",
+                "legendary": "Epic Games / Legendary 日志",
+                "nile": "Amazon / Nile 日志"
+            },
+            "show-uploads": "显示上传的日志文件"
         },
         "mangohud": "启用 MangoHud（需要已安装 Mangohud）",
         "manualsync": {
@@ -552,7 +699,44 @@
         "wineprefix": "WinePrefix文件夹",
         "wineversion": "Wine 版本",
         "autoUpdateGames": "自动更新游戏",
-        "ignoreGameUpdates": "忽略游戏更新"
+        "ignoreGameUpdates": "忽略游戏更新",
+        "disable_logs": "禁用日志",
+        "addgamestoapplications": "自动将游戏添加到应用程序",
+        "showMetalOverlay": "显示统计数据叠加",
+        "alt-nile-bin": "选择替代尼罗河二进制",
+        "autodxvknvapi": "在前置自动安装并更新 DXVK-NVAPI",
+        "experimental_features": {
+            "enableNewShinyFeature": "新功能",
+            "enableNewDesign": "新设计",
+            "enableHelp": "帮助组件",
+            "automaticWinetricksFixes": "自动应用已知的修复",
+            "umuSupport": "将 umu 用作 Proton 运行时",
+            "cometSupport": "Comet 支持"
+        },
+        "disablePlaytimeSync": "停用游戏时间同步",
+        "gamescope": {
+            "enableLimiter": "启用 FPS 限制程序",
+            "enableUpscaling": "启用分辨率提升",
+            "missingMsg": "我们在 PATH 上找不到 Gamescope。请先安装它或将其添加到 PATH。"
+        },
+        "frameless-window": {
+            "confirmation": {
+                "message": "此功能仍是实验性的。请在 GitHub 上报告任何你在使用该功能时遇到的问题。",
+                "title": "实验性功能"
+            },
+            "description": "使用无框架窗口（需要重启）"
+        },
+        "msync": "启用 Msync",
+        "after-launch-script-path": "选择在游戏退出后要运行的脚本",
+        "before-launch-script-path": "选择游戏启动前要运行的脚本",
+        "allow_installation_broken_anticheat": {
+            "confirmation": {
+                "title": "你确定吗？",
+                "understand": "我理解",
+                "message": "反作弊损坏或被拒绝的游戏可以运行，但多玩家功能不会正常运作。如果你知晓这一点但仍安装了这样的游戏，请不要寻求支持。"
+            },
+            "label": "允许安装反作弊损坏或被拒绝的游戏"
+        }
     },
     "settings": {
         "battlEyeRuntime": {
@@ -587,13 +771,69 @@
             "log": "日志",
             "other": "其它",
             "sync": "存档-同步",
-            "wineExt": "Wine 扩展"
+            "wineExt": "Wine 扩展",
+            "systemInformation": "系统信息",
+            "gamescope": "Gamescope"
         },
         "open-config-file": "打开配置文件",
         "reset-heroic": "重置 Heroic",
         "saves": {
             "label": "存档位置：",
             "warning": "云存档功能处于测试期，请在同步前备份你的存档（以防出现问题）"
+        },
+        "experimental_features": {
+            "title": "实验性功能"
+        },
+        "systemInformation": {
+            "cpu": "CPU：",
+            "gpuWithNumber": "GPU {{number}}：",
+            "cpuDescription": "{{numOfCores}}x {{modelName}}",
+            "legendaryVersion": "Legendary: {{legendaryVersion}}",
+            "systemSpecifications": "系统规格：",
+            "steamDeck": "Steam Deck {{model}}",
+            "gpuDriver": "驱动：{{driverVersion}}",
+            "os": "操作系统：",
+            "gpu": "GPU：",
+            "gogdlVersion": "Gogdl: {{gogdlVersion}}",
+            "osVersion": "版本 {{versionNumber}}",
+            "osNameFlatpak": "{{osName}} (inside Flatpak)",
+            "software": "软件：",
+            "memoryStats": "已用 {{percentUsed}}% {{usedGib}}/{{totalGib}}",
+            "systemModel": "系统型号：",
+            "showDetailed": "显示详细的系统规格",
+            "memory": "内存：",
+            "copyToClipboard": "复制到剪贴板",
+            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "nileVersion": "Nile: {{nileVersion}}",
+            "cometVersion": "Comet：{{cometVersion}}"
+        },
+        "gamescope": {
+            "searchMsg": "搜索 Gamescope 可执行文件。"
+        },
+        "offline": {
+            "warning": "此游戏未明确允许离线模式，你可以开启本选项，但后果自负。开启后，游戏可能无法正常运作。"
+        },
+        "advanced": {
+            "clearCache": {
+                "help10": "Heroic 配置",
+                "help3": "Legendary 库信息（游戏列表、安装对话框信息、游戏信息）",
+                "help4": "GOG 库信息（游戏列表、安装对话框信息、api 信息，-i.e: requirements-）",
+                "help1": "此操作将清除下列缓存：",
+                "help2": "第三方游戏信息（得分、 steam 兼容性、howlongtobeat、pcgamingwiki、applegamingwiki）",
+                "help7": "存储登录信息",
+                "help5": "Amazon 库信息（游戏列表、安装对话框信息）",
+                "help6": "这不会删除：",
+                "help9": "游戏设置",
+                "help8": "已安装的游戏"
+            },
+            "resetHeroic": {
+                "help": "这会删除所有设置和环迅但不会删除你已安装的游戏或 Epic 凭据。在此之后，需要手动重启 Heroic 便携版本（AppImage、WinPortable, ...）。"
+            },
+            "title": {
+                "clearCache": "清除缓存",
+                "resetHeroic": "重置 Heroic"
+            },
+            "details": "详细内容"
         }
     },
     "Settings": "设置",
@@ -604,7 +844,8 @@
     "status": {
         "installing": "安装中",
         "logging": "正在登录...",
-        "processing": "处理文件中，请稍等"
+        "processing": "处理文件中，请稍等",
+        "preparing_login": "正在准备登录... "
     },
     "store": "Epic 商店",
     "stores": "商店",
@@ -630,7 +871,7 @@
     "two_col_table": {
         "save_hint": "此表中的更改不会自动保存。 单击 + 按钮"
     },
-    "Update Available!": "",
+    "Update Available!": "有更新可用！",
     "userselector": {
         "discord": "Discord",
         "logging_out": "退出登录",
@@ -666,5 +907,63 @@
     },
     "wiki_info": {
         "not_found": "我们找不到额外的信息。"
+    },
+    "dlc": {
+        "actions": "操作",
+        "installDlcs": "安装所有 DLC",
+        "noDlcFound": "未找到 DLC",
+        "size": "大小",
+        "title": "标题"
+    },
+    "amazon": "亚马逊",
+    "Amazon Games": "亚马逊游戏",
+    "prime-gaming": "Prime Gaming",
+    "winetricks": {
+        "install": "安装",
+        "loading": "加载中",
+        "installing": "正在安装：{{component}}",
+        "openGUI": "打开 Winetricks 用户界面",
+        "search": "搜索字体或部件",
+        "nothingYet": "Winetricks 还没安装任何东西",
+        "installed": "已安装的部件："
+    },
+    "window": {
+        "minimize": "最小化窗口",
+        "maximize": "最大化窗口",
+        "restore": "还原窗口",
+        "close": "关闭"
+    },
+    "category-settings": {
+        "remove-category": "删除分类",
+        "delete-question": "继续操作将永久删除此分类且所有先前该分类下的游戏将不再属于此分类。继续吗？",
+        "new-category": "新分类",
+        "add-new-category": "添加新分类",
+        "cancel": "取消",
+        "warning": "警告"
+    },
+    "wineExplanation": {
+        "wine-ge": "Wine-GE-Protonis 是 Glorious Eggroll 创建的 Wine 变体。它是建议用于 Steam 之外的 Wine 版本，提供对故障排除有用的日志。",
+        "proton-ge": "GE-Proton 是 Glorious Eggroll 创建的 Proton 变体。该变体意在用于 Steam 中，但某些 Steam 之外的游戏也许可以和它更好地配合。它提供大多是用于故障排除的无用日志。"
+    },
+    "emptyLibrary": {
+        "noResults": "使用当前筛选器找不到结果。",
+        "noGames": "你的库是空的。要<1>登录</1>你可以使用商店或单击 <3></3>来手动添加一个。"
+    },
+    "adtraction-locked": {
+        "dont-show-again": "不再显示此警告",
+        "title": "Adtraction 被封禁",
+        "description": "track.adtraction.com 域名似乎无法加载或者被封禁。通过 adtraction，你在 GOG 商店的任意购买都会在经济上支持 Heroic。如果希望作贡献，请考虑解除对此站点的封禁。"
+    },
+    "categories-manager": {
+        "confirm-rename": "确认将“{{oldName}}“重命名为“{{newName}}”",
+        "add": "添加",
+        "no-categories": "尚无分类。",
+        "remove": "删除“{{name}}”",
+        "cancel-remove": "取消删除“{{name}}”",
+        "rename": "重命名“{{name}}”",
+        "cancel-rename": "取消重命名“{{name}}”",
+        "confirm-remove": "确认删除“{{name}}”",
+        "title": "管理分类",
+        "add-placeholder": "添加新分类"
     }
 }

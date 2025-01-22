@@ -1,6 +1,6 @@
 .gameCard {
   background-color: var(--gradient-gamecard);
-  text-align: left;
+  text-align: start;
   width: 100%;
   overflow: hidden;
   position: relative;
@@ -9,7 +9,20 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--space-3xs);
-  animation: fade-in 0.2s ease-in;
+  animation: fade-in 0.1s ease-in;
+  aspect-ratio: 173/275;
+}
+
+.gameCard.gamepad {
+  aspect-ratio: 3/4;
+}
+
+.gameCard.justPlayed {
+  aspect-ratio: 275/205;
+}
+
+.gameCard.gamepad.justPlayed {
+  aspect-ratio: 328/205;
 }
 
 .gameCard:focus-within {
@@ -39,7 +52,7 @@
 
 .gameCard.notAvailable > .gameCardStatus {
   color: var(--text-log);
-  text-align: right;
+  text-align: end;
 }
 
 .gameCard > a {
@@ -55,6 +68,12 @@
   object-fit: cover;
   aspect-ratio: 3 / 4;
   display: block;
+}
+
+.gameCard.justPlayed .justPlayedImg {
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  width: 100%;
 }
 
 .gameCard .gameLogo {
@@ -87,7 +106,8 @@
   transform: translateY(100%);
 }
 
-.gameCard:hover .gameTitle {
+.gameCard:hover .gameTitle,
+.titlesAlwaysVisible .gameTitle {
   display: block;
   transform: translateY(0);
 }
@@ -101,7 +121,17 @@
   padding: var(--space-xs-fixed);
 }
 
-.gameCard > .icons.gamepad {
+.gameCard.justPlayed > .icons {
+  justify-content: right;
+  grid-template-columns: 0.3fr 1fr 0.4fr 0.5fr;
+  grid-template-areas: 'update gap settings play';
+}
+
+.gameCard.justPlayed.hidden .justPlayedImg {
+  opacity: 0.2;
+}
+
+.gameCard.gamepad > .icons {
   display: none;
 }
 
@@ -191,8 +221,8 @@
 .gameListItem .gameTitle {
   grid-area: name;
   font-size: var(--text-md);
-  padding-right: var(--space-md-fixed);
-  text-align: left;
+  padding-inline-end: var(--space-md-fixed);
+  text-align: start;
 }
 
 .gameListItem .installed {
@@ -260,7 +290,9 @@
 
 .gameImg,
 .gameLogo {
-  transition: all 0.2s, opacity 0.5s;
+  transition:
+    all 0.2s,
+    opacity 0.5s;
 }
 
 .gameImg:not(.installed),
@@ -270,8 +302,8 @@
 
 .gameCard:hover .gameImg:not(.installed),
 .gameCard:hover .gameLogo:not(.installed),
-.gameImg.allTilesInColor,
-.gameLogo.allTilesInColor {
+.allTilesInColor .gameImg,
+.allTilesInColor .gameLogo {
   filter: grayscale(0);
 }
 
@@ -301,6 +333,28 @@
 .cancelIcon {
   grid-area: play;
   transition: all 300ms;
+}
+
+.playIcon > span {
+  font-family: var(--secondary-font-family);
+  border-radius: 5px;
+  color: #1d1d1d;
+  cursor: pointer;
+  padding: var(--space-xs-fixed);
+  background: var(--success);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-size: 15px;
+  text-align: center;
+}
+
+.playIcon:hover > span {
+  transition: 300ms;
+  background: var(--success-hover);
+}
+
+.playIcon[disabled] > span {
+  background: var(--icon-disabled);
 }
 
 .icons path,

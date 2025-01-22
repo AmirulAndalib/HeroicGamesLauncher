@@ -8,8 +8,9 @@
   }
 
   .imageIcons {
-    margin: var(--space-lg) var(--space-lg) 0 0;
-    width: min-content;
+    margin-block: var(--space-lg) 0;
+    margin-inline: 0 var(--space-lg);
+    width: auto;
   }
 
   .appImage {
@@ -19,6 +20,8 @@
     display: block;
     width: 210px;
     transition: 200ms;
+    border: 3px solid var(--neutral-02);
+    border-radius: 10px;
 
     &.blackWhiteImage {
       filter: grayscale(100%);

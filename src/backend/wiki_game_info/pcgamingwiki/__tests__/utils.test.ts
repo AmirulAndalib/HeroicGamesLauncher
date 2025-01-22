@@ -1,14 +1,14 @@
 import { logError } from 'backend/logger/logger'
 import { getInfoFromPCGamingWiki } from '../utils'
-import axios from 'axios'
+import { axiosClient } from 'backend/utils'
 
 jest.mock('backend/logger/logfile')
 jest.mock('backend/logger/logger')
 
-describe('getPCGamingWikiInfo', () => {
+describe('getInfoFromPCGamingWiki', () => {
   test('fetches successfully via title', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: 1 } }] }
+    const mockAxios = jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: 1 }] } }
     })
     mockAxios.mockResolvedValueOnce({
       data: {
@@ -31,7 +31,7 @@ describe('getPCGamingWikiInfo', () => {
   })
 
   test('fetches successfully via id', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
+    const mockAxios = jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
       data: { cargoquery: [{ title: { pageID: 1 } }] }
     })
     mockAxios.mockResolvedValueOnce({
@@ -55,8 +55,8 @@ describe('getPCGamingWikiInfo', () => {
   })
 
   test('does not find page id', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: undefined } }] }
+    jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: undefined }] } }
     })
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3')
@@ -64,8 +64,8 @@ describe('getPCGamingWikiInfo', () => {
   })
 
   test('does not find wikitext', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: 1 } }] }
+    const mockAxios = jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: 1 }] } }
     })
     mockAxios.mockResolvedValueOnce({
       data: {
@@ -80,8 +80,8 @@ describe('getPCGamingWikiInfo', () => {
   })
 
   test('wikitext empty', async () => {
-    const mockAxios = jest.spyOn(axios, 'get').mockResolvedValueOnce({
-      data: { cargoquery: [{ title: { pageID: 1 } }] }
+    const mockAxios = jest.spyOn(axiosClient, 'get').mockResolvedValueOnce({
+      data: { query: { search: [{ pageid: 1 }] } }
     })
     mockAxios.mockResolvedValueOnce({
       data: {
@@ -96,7 +96,7 @@ describe('getPCGamingWikiInfo', () => {
   })
 
   test('catches axios throws', async () => {
-    jest.spyOn(axios, 'get').mockRejectedValueOnce(new Error('Failed'))
+    jest.spyOn(axiosClient, 'get').mockRejectedValueOnce(new Error('Failed'))
 
     const result = await getInfoFromPCGamingWiki('The Witcher 3')
     expect(result).toBeNull()
@@ -116,10 +116,12 @@ const testPCGamingWikiInfo = {
     score: '10',
     urlid: 'the-witcher-3-wild-hunt'
   },
+  genres: [''],
   opencritic: {
     score: '22',
     urlid: '463/the-witcher-3-wild-hunt'
   },
+  releaseDate: [],
   igdb: {
     score: '40',
     urlid: 'the-witcher-3-wild-hunt'

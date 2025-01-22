@@ -1,11 +1,10 @@
 import { ipcRenderer } from 'electron'
 import {
   Runner,
-  InstallParams,
   LaunchParams,
-  SideloadGame,
   ImportGameArgs,
-  GameStatus
+  GameStatus,
+  GameInfo
 } from 'common/types'
 
 export const removeFolder = (args: [path: string, folderName: string]) =>
@@ -21,7 +20,11 @@ export const uninstall = async (
   shouldRemoveSetting: boolean
 ) => {
   if (runner === 'sideload') {
-    return ipcRenderer.invoke('removeApp', { appName, shouldRemovePrefix })
+    return ipcRenderer.invoke('removeApp', {
+      appName,
+      shouldRemovePrefix,
+      runner
+    })
   } else {
     return ipcRenderer.invoke(
       'uninstall',
@@ -61,21 +64,21 @@ export const onProgressUpdate = (
   }
 }
 
-export const handleLaunchGame = (
+export const handleInstallGame = (
   callback: (
     event: Electron.IpcRendererEvent,
     appName: string,
     runner: Runner
-  ) => Promise<{ status: 'done' | 'error' }>
-) => ipcRenderer.on('launchGame', callback)
-
-export const handleInstallGame = (
-  callback: (event: Electron.IpcRendererEvent, args: InstallParams) => void
+  ) => void
 ) => ipcRenderer.on('installGame', callback)
 
 export const handleRefreshLibrary = (
-  callback: (event: Electron.IpcRendererEvent, runner: Runner) => void
+  callback: (event: Electron.IpcRendererEvent, runner?: Runner) => void
 ) => ipcRenderer.on('refreshLibrary', callback)
+
+export const handleGamePush = (
+  callback: (event: Electron.IpcRendererEvent, game: GameInfo) => void
+) => ipcRenderer.on('pushGameToLibrary', callback)
 
 export const removeRecentGame = async (appName: string) =>
   ipcRenderer.invoke('removeRecent', appName)
@@ -87,8 +90,15 @@ export const handleRecentGamesChanged = (callback: any) => {
   }
 }
 
-export const addNewApp = (args: SideloadGame) =>
-  ipcRenderer.send('addNewApp', args)
+export const addNewApp = (args: GameInfo) => ipcRenderer.send('addNewApp', args)
 
-export const launchApp = async (appName: string): Promise<boolean> =>
-  ipcRenderer.invoke('launchApp', appName)
+export const changeGameVersionPinnedStatus = (
+  appName: string,
+  runner: Runner,
+  status: boolean
+) => ipcRenderer.send('changeGameVersionPinnedStatus', appName, runner, status)
+
+export const getGameOverride = async () => ipcRenderer.invoke('getGameOverride')
+
+export const getGameSdl = async (appName: string) =>
+  ipcRenderer.invoke('getGameSdl', appName)

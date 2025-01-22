@@ -56,7 +56,7 @@
                 "title": "Joko karpeta ezabatu egin dela dirudi, jokoa instalatutako zerrendatik kendu nahi duzu?"
             },
             "generic": {
-                "message": "Errore ezezagun bat gertatu da",
+                "message": "Errore mezu generikoa",
                 "title": "Errore ezezaguna"
             },
             "launchAborted": "Exekuzioa abortatu egin da",
@@ -78,7 +78,14 @@
                 "message": "Winetricks-ek errore hau itzuli du exekuzioan:{{newLine}}{{error}}",
                 "title": "Winetricks errorea"
             },
-            "moving": "Errorea jokoa mugitzean {{error}}"
+            "moving": "Errorea jokoa mugitzean {{error}}",
+            "ubisoft-connect": {
+                "title": "Ubisoft Connect",
+                "message": "Ezin izan da instalatu Ubisoft Connect jokoaren aurrizkian. Begiratu gure wiki orria https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac helbidean modu egokian instalatzeko."
+            },
+            "legendary": {
+                "generic": "Akats bat gertatu da! Saiatu saioa amaitzen eta saioa hasten zure Epic kontuan. {{newline}} {{error}}"
+            }
         },
         "info": {
             "update": {
@@ -108,7 +115,7 @@
             }
         },
         "runexe": {
-            "title": "Hautatu EXE exekutatzeko"
+            "title": "Hautatu exekutatzeko EXEa"
         },
         "select": {
             "button": "Hautatu",
@@ -116,9 +123,9 @@
         },
         "shortcuts": {
             "message": "Lasterbideak sortu dira Mahaigainean eta Hasierako Menuan",
-            "message-mac": "Shortcuts were created on the Applications folder",
+            "message-mac": "Lasterbideak sortu dira Aplikazioak karpetan",
             "message-remove": "Lasterbideak mahaigainetik eta Hasi menutik kendu dira",
-            "message-remove-mac": "Shortcuts were removed from the Applications folder",
+            "message-remove-mac": "Aplikazioak karpetatik lasterbideak kendu dira.",
             "title": "Lasterbideak"
         },
         "sync": {
@@ -147,9 +154,11 @@
                 "title": "Ez da ardorik aurkitu!"
             }
         },
-        "wineprefix": "Aukeratu Wine-Prefix karpeta",
+        "wineprefix": "Aukeratu Wine Prefix karpeta",
         "yes": "BAI",
-        "dontShowAgain": "Ez erakutsi berriro"
+        "dontShowAgain": "Ez erakutsi berriro",
+        "choose-nile-binary": "Hautatu Nile bitarra",
+        "update": "Update"
     },
     "button": {
         "cancel": "Ezeztatu",
@@ -197,7 +206,8 @@
             "start-time": "Started at",
             "type": "Type"
         },
-        "title": "Downloads"
+        "title": "Downloads",
+        "ETA": "Aurreikusitako denbora"
     },
     "epic": {
         "offline-notification-body": "Baliteke lineako zerbitzuak guztiz ez funtzionatzea Epic Games zerbitzariak lineaz kanpo daudelako!",
@@ -209,7 +219,8 @@
     "game": {
         "status": "Egoera",
         "store": "Denda",
-        "title": "Jokoaren izenburua"
+        "title": "Jokoaren izenburua",
+        "modify": "Aldatu Instalazioa"
     },
     "generic": {
         "error": {
@@ -230,7 +241,8 @@
         "show_available_games": "Show non-Available games",
         "show_favourites_only": "Erakutsi gogokoenak soilik",
         "show_hidden": "Erakutsi ezkutatutakoak",
-        "store": "Iragazi denda"
+        "store": "Iragazi denda",
+        "filters": "Iragazkiarekin"
     },
     "help": {
         "amdfsr": "AMD-ren FSR-k fotograma-tasa areagotzen laguntzen du pantaila osoko moduan bereizmen baxuagoak igoz. Irudiaren kalitatea 5etik 1era igotzen da errendimendu txiki baten truke. Gaitzeak errendimendua hobetu dezake.",
@@ -270,6 +282,11 @@
         "wine": {
             "part1": "Heroikoek Wine, Proton eta CrossOver-en bertsioak bilatzen ditu karpeta hauetan:",
             "part2": "Beste leku batzuetarako, erabili karpeta horietako batera esteka sinboliko bat"
+        },
+        "disable_logs": "Aktibatu kontrol-lauki hau erregistro-fitxategietako idazketa gehienak desgaitzeko (informazio kritikoa beti erregistratzen da). Ziurtatu ezarpen hau desaktibatu duzula edozein arazoren berri eman aurretik.",
+        "title": {
+            "accessibility": "Erabilerraztasuna",
+            "downloadManager": "Download Manager"
         }
     },
     "info": {
@@ -297,7 +314,8 @@
         "wine-repfix": {
             "message": "Wine-k WINEPREFIX deritzona erabiltzen du Windows aplikazioak kapsulatzeko. Aurrizki honek Wine konfigurazio-fitxategiak eta C:-ren fitxategi-hierarkiaren erreprodukzioa ditu (Windows OS bateko disko nagusia). C: diskoaren erreprodukzio honetan, zure jokoa gordetzeko fitxategiak eta winetricks bidez instalatutako mendekotasunak gordetzen dira."
         },
-        "wine-path-invalid": "Ardoaren bidea baliogabea da, hautatu beste bat."
+        "wine-path-invalid": "Ardoaren bidea baliogabea da, hautatu beste bat.",
+        "wine-path-none-found": "Ez da Wine bertsiorik aurkitu, deskargatu bat Wine Manager-etik"
     },
     "install": {
         "path": "Hautatu Instalatu bidea"
@@ -324,7 +342,8 @@
         "alternative_method": "Alternative Login Method",
         "epic": "Hasi Epic Games saioa",
         "gog": "Hasi GOG saioa",
-        "message": "Hasi saioa zure plataformetan. Saioa behin baino gehiagotan batera has dezakezu."
+        "message": "Hasi saioa zure plataformetan. Saioa behin baino gehiagotan batera has dezakezu.",
+        "amazon": "Amazon-en saioa"
     },
     "message": {
         "sync": "Sinkronizazioa amaituta",
@@ -357,7 +376,9 @@
             "error": "Instalazioak huts egin du",
             "finished": "Amaitu da instalatzea",
             "imported": "Jokoa inportatua",
-            "startInstall": "Instalazioa hasi da"
+            "startInstall": "Instalazioa hasi da",
+            "failed": "Instalazioak huts egin du",
+            "paused": "Instalazioa pausatu da"
         },
         "moved": "Mugitzen amaitu",
         "moving": "Mugimendu Jokoa",
@@ -369,17 +390,19 @@
         "update": {
             "canceled": "Eguneratua Ezeztatuta",
             "finished": "Eguneraketa bukatu da",
-            "started": "Eguneratzea hasi da"
+            "started": "Eguneratzea hasi da",
+            "failed": "Eguneratzea huts egin du",
+            "paused": "Eguneratzea pausatu da"
         }
     },
     "offline-message": {
-        "hint": "We are checking the connectivity against:{{newline}}github.com,{{newline}}gog.com and{{newline}}store.epicgames.com",
+        "hint": "Konektibitatea begiratzen ari gara zerbitzu hauentzat:{{newline}}github.com,{{newline}}gog.com {{newline}}store.epicgames.com eta{{newline}}cloudflare-dns.com",
         "ignore": "Ignore",
         "offline": "Offline",
         "offline-retry-in": "Offline. Retrying in {{seconds}} seconds.",
         "retrying": "Retrying"
     },
-    "Open": "",
+    "Open": "Ireki",
     "options": {
         "advanced": {
             "key": "Aldagaiaren izena",
@@ -414,21 +437,24 @@
     "other": {
         "gogdl-version": "GOGDL bertsioa: ",
         "legendary-version": "Bertsio mitikoa: ",
-        "weblate": "Lagundu Heroic itzultzen."
+        "weblate": "Lagundu Heroic itzultzen.",
+        "nile-version": "Nile bertsioa: "
     },
     "Other": "Other",
     "placeholder": {
         "alt-gogdl-bin": "GOGDL bitarra integratua erabiltzen...",
         "alt-legendary-bin": "Kondairazko bitar integratua erabiltzen...",
         "custom_themes_path": "Select the path to look for custom CSS files",
-        "dxvkfpsvalue": "Postive integer value (e.g. 30, 60, ...)",
+        "dxvkfpsvalue": "Positive integer value (e.g. 30, 60, ...)",
         "egs-prefix": "EGS instalatuta dagoen aurrizkia",
-        "prefered_language": "2 karaktere kodea (hau da: \"en\" edo \"fr\")"
+        "prefered_language": "2 karaktere kodea (hau da: \"en\" edo \"fr\")",
+        "alt-nile-bin": "Nile bitarra integratua erabiltzen..."
     },
     "platforms": {
         "linux": "Linux",
         "mac": "Mac",
-        "win": "Leihoak"
+        "win": "Leihoak",
+        "browser": "Arakatzailea"
     },
     "please-wait": "Please wait...",
     "progress": "Aurrerapena",
@@ -440,7 +466,9 @@
             "empty": "Nothing to download",
             "finished": "Completed",
             "queued": "Queued",
-            "remove": "Remove from Downloads"
+            "remove": "Remove from Downloads",
+            "pause": "Pausatu deskarga",
+            "resume": "Jarraitu deskargatzea"
         }
     },
     "Recent": "Duela gutxi jokatuta",
@@ -456,7 +484,7 @@
         "autovkd3d": "Instalatu/Eguneratu automatikoki VKD3D aurrizkian",
         "change-target-exe": "Hautatu exekutatzeko EXE alternatibo bat",
         "checkForUpdatesOnStartup": "Hasieran eguneraketak bilatu",
-        "crossover-version": "Crossover bertsioa",
+        "crossover-version": "Crossover/Wine bertsioa",
         "custom_themes_path": "Custom Themes Path",
         "customWineProton": "Ardo/Protoien bideak pertsonalizatuak",
         "darktray": "Erabili erretilu iluna ikonoa",
@@ -510,7 +538,10 @@
             "instructions_title": "Nola salatu arazo bat?",
             "last-log": "Azken erregistroa",
             "no-file": "Ez da aurkitu erregistro-fitxategirik",
-            "show-in-folder": "Erakutsi erregistro-fitxategia karpetan"
+            "show-in-folder": "Erakutsi erregistro-fitxategia karpetan",
+            "upload": {
+                "actions": "Action"
+            }
         },
         "mangohud": "Gaitu Mangohud (Mangohud instalatu behar da)",
         "manualsync": {
@@ -552,7 +583,11 @@
         "wineprefix": "WinePrefix karpeta",
         "wineversion": "Ardoaren Bertsioa",
         "autoUpdateGames": "Eguneratu jokoak automatikoki",
-        "ignoreGameUpdates": "Ez ikusi jokoaren eguneraketak"
+        "ignoreGameUpdates": "Ez ikusi jokoaren eguneraketak",
+        "disable_logs": "Desgaitu erregistroak",
+        "addgamestoapplications": "Gehitu automatikoki jokoak aplikazioetan",
+        "showMetalOverlay": "Erakutsi estatistikak gainjartzea",
+        "alt-nile-bin": "Aukeratu Nile Binary alternatibo bat"
     },
     "settings": {
         "battlEyeRuntime": {
@@ -586,7 +621,7 @@
             "general": "Orokorra",
             "log": "Erregistroa",
             "other": "Bestela",
-            "sync": "Gorde-Sinkronizazioa",
+            "sync": "Hodeiko gordetzeen sinkronizazioa",
             "wineExt": "Ardoaren luzapenak"
         },
         "open-config-file": "Ireki Konfigurazio fitxategia",
@@ -594,6 +629,18 @@
         "saves": {
             "label": "Gorde kokapena:",
             "warning": "Hodeiko Gordeen eginbidea beta-n dago. Sinkronizatu aurretik gordetako babeskopiak egin behar dira (zerbait gaizki gertatzen bada)"
+        },
+        "advanced": {
+            "details": "Xehetasunak",
+            "title": {
+                "resetHeroic": "Berrezarri Heroic"
+            },
+            "resetHeroic": {
+                "help": "Ziur zaude Heroic berrabiarazi nahi duzula? Horrek ezarpen guztiak eta cacheko biltegiratzea ezabatuko ditu, baina ez ditu zure instalatutako jokoak edo Epic-eko kredentzialak ezabatuko. Heroic-en bertsio eramangarriak (AppImage, WinPortable, ...) berrabiarazi egin behar dira."
+            },
+            "clearCache": {
+                "help9": "Game Settings"
+            }
         }
     },
     "Settings": "Ezarpenak",
@@ -604,7 +651,8 @@
     "status": {
         "installing": "Instalatzen",
         "logging": "Saioa hasi...",
-        "processing": "Fitxategiak prozesatzen, itxaron mesedez"
+        "processing": "Fitxategiak prozesatzen, itxaron mesedez",
+        "preparing_login": "Saioa hasteko prestatzen... "
     },
     "store": "Denda epikoa",
     "stores": "Dendak",
@@ -630,7 +678,7 @@
     "two_col_table": {
         "save_hint": "Taula honetako aldaketak ez dira automatikoki gordetzen. Egin klik + botoian"
     },
-    "Update Available!": "",
+    "Update Available!": "Eguneraketa eskuragarri!",
     "userselector": {
         "discord": "Discordia",
         "logging_out": "Logging out",
@@ -666,5 +714,26 @@
     },
     "wiki_info": {
         "not_found": "Ezin izan dugu informazio gehigarririk aurkitu."
+    },
+    "dlc": {
+        "actions": "Ekintzak",
+        "installDlcs": "Instalatu DLC guztiak",
+        "noDlcFound": "Ez da DLCrik aurkitu",
+        "size": "Tamaina",
+        "title": "Title"
+    },
+    "amazon": "Amazon",
+    "Amazon Games": "Amazon Jokoak",
+    "prime-gaming": "Prime Gaming",
+    "winetricks": {
+        "install": "Install",
+        "loading": "Kargatzen"
+    },
+    "category-settings": {
+        "cancel": "Ezeztatu",
+        "warning": "Warning"
+    },
+    "window": {
+        "close": "Itxi"
     }
 }

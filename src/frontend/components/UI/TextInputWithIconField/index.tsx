@@ -16,13 +16,23 @@ interface TextInputWithIconFieldProps {
   onBlur?: (event: FocusEvent<HTMLInputElement>) => void
 }
 
-const TextInputWithIconField = (props: TextInputWithIconFieldProps) => {
+const TextInputWithIconField = ({
+  icon,
+  onIconClick,
+  disabled = false,
+  ...props
+}: TextInputWithIconFieldProps) => {
   return (
     <TextInputField
       {...props}
+      disabled={disabled}
       inputIcon={
-        <SvgButton onClick={props.onIconClick} className="inputIcon">
-          {props.icon}
+        <SvgButton
+          disabled={disabled}
+          onClick={onIconClick}
+          className="inputIcon"
+        >
+          {icon}
         </SvgButton>
       }
     />

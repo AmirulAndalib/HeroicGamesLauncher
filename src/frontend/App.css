@@ -1,5 +1,5 @@
-@import '~@fontsource/rubik/index.css';
-@import '~@fontsource/cabin/index.css';
+@import '@fontsource/rubik/index.css';
+@import '@fontsource/cabin/index.css';
 /*
   Subset of font https://github.com/googlefonts/noto-emoji
   which includes only flags emoji generated using command:
@@ -16,34 +16,34 @@
   /* Measurements */
 }
 
-body,
-html,
-#root,
-.App {
-  height: 100%;
-  overflow: hidden;
+body {
+  height: 100vh;
 }
 
 .App {
   text-align: center;
   display: grid;
   grid-template-columns: min-content 1fr;
-  grid-template-areas: 'offline offline' 'sidebar content' 'controller controller';
+  grid-template-areas: 'offline offline' 'sidebar content' 'sidebar controller';
   grid-template-rows: min-content 1fr min-content;
+  min-height: 100vh;
 }
 
 .App .Sidebar {
   grid-area: sidebar;
+  max-height: 100vh;
+  position: sticky;
+  top: 0px;
 }
 
 .App .content {
   display: flex;
   grid-area: content;
   flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: var(--gradient-body-background);
+  min-height: 100%;
+  &:not(:has(.gameConfigContainer img.backgroundImage)) {
+    background: var(--gradient-body-background, var(--body-background));
+  }
 }
 
 .App .content .UpdateComponent--topLevel {
@@ -53,11 +53,49 @@ html,
 
 .App .controller {
   grid-area: controller;
-  position: relative;
+  position: sticky;
+  bottom: 0px;
+  background: var(--background);
+  z-index: 10;
 }
 
 .App .offline-message {
   grid-area: offline;
+}
+
+.HelpButton {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+}
+
+/* Disable content behind an opened dialog so it cannot be clicked */
+#root:has(dialog:popover-open) {
+  pointer-events: none;
+
+  /* Make sure content of the dialog and Help can be clicked */
+  .HelpButton,
+  :popover-open {
+    pointer-events: all;
+  }
+}
+
+/* Remove outline on the root element since it's not clickable anyway and it's partially hidden away by sidebar */
+
+#root:focus-visible {
+  outline: none;
+}
+
+/* disable links when the help is open, so users cannot navigate
+to another page but still use the elements of the current page */
+#root:has(.HelpContent.open) {
+  & a {
+    pointer-events: none;
+  }
+  /* Make sure links in Help work */
+  .HelpContent a {
+    pointer-events: all;
+  }
 }
 
 .danger {
@@ -112,6 +150,15 @@ svg.disabled {
   color: var(--background);
 }
 
+img.loading {
+  opacity: 0;
+}
+
+img.loaded {
+  transition: opacity 500ms;
+  opacity: 1;
+}
+
 .react-contextmenu--visible {
   background-color: var(--input-background);
   padding: var(--space-md) var(--space-lg);
@@ -125,7 +172,7 @@ svg.disabled {
   line-height: var(--space-lg);
   font-family: var(--secondary-font-family);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
 }
 
 .react-contextmenu-item:hover {

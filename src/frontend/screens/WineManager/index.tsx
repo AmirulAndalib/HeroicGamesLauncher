@@ -1,9 +1,9 @@
-import './index.scss'
+import './index.css'
 
 import ContextProvider from 'frontend/state/ContextProvider'
 import { UpdateComponent } from 'frontend/components/UI'
 
-import React, { lazy, useContext, useEffect, useState } from 'react'
+import React, { lazy, useContext, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tab, Tabs } from '@mui/material'
 import {
@@ -11,8 +11,13 @@ import {
   wineDownloaderInfoStore
 } from 'frontend/helpers/electronStores'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCheck,
+  faSyncAlt,
+  faWarning
+} from '@fortawesome/free-solid-svg-icons'
 import { WineVersionInfo, Type, WineManagerUISettings } from 'common/types'
+import { hasHelp } from 'frontend/hooks/hasHelp'
 
 const WineItem = lazy(
   async () => import('frontend/screens/WineManager/components/WineItem')
@@ -22,38 +27,56 @@ const configStore = new TypeCheckedStoreFrontend('wineManagerConfigStore', {
   cwd: 'store'
 })
 
-export default React.memo(function WineManager(): JSX.Element | null {
+export default function WineManager(): JSX.Element | null {
   const { t } = useTranslation()
+
+  hasHelp(
+    'wineManager',
+    t('help.title.wineManager', 'Wine Manager'),
+    <p>
+      {t(
+        'help.content.wineManager',
+        'Install different versions of Wine, Proton, Crossover, etc.'
+      )}
+    </p>
+  )
+
   const { refreshWineVersionInfo, refreshing, platform } =
     useContext(ContextProvider)
   const isLinux = platform === 'linux'
 
-  const winege: WineManagerUISettings = {
-    type: 'Wine-GE',
-    value: 'winege',
+  const protonge: WineManagerUISettings = {
+    type: 'GE-Proton',
+    value: 'protonge',
     enabled: isLinux
   }
-  const winecrossover: WineManagerUISettings = {
-    type: 'Wine-Crossover',
-    value: 'winecrossover',
+  const gamePortingToolkit: WineManagerUISettings = {
+    type: 'Game-Porting-Toolkit',
+    value: 'gpt',
     enabled: !isLinux
   }
 
   const [repository, setRepository] = useState<WineManagerUISettings>(
-    isLinux ? winege : winecrossover
+    isLinux ? protonge : gamePortingToolkit
   )
   const [wineManagerSettings, setWineManagerSettings] = useState<
     WineManagerUISettings[]
   >([
+    protonge,
     { type: 'Wine-GE', value: 'winege', enabled: isLinux },
-    { type: 'Proton-GE', value: 'protonge', enabled: isLinux },
-    { type: 'Wine-Crossover', value: 'winecrossover', enabled: !isLinux },
-    { type: 'Wine-Staging-macOS', value: 'winestagingmacos', enabled: !isLinux }
+    gamePortingToolkit,
+    { type: 'Wine-Crossover', value: 'winecrossover', enabled: !isLinux }
   ])
 
   const getWineVersions = (repo: Type) => {
-    const versions = wineDownloaderInfoStore.get('wine-releases', [])
-    return versions.filter((version) => version.type === repo)
+    let versions = wineDownloaderInfoStore.get('wine-releases', [])
+
+    if (repo.startsWith('Wine-GE')) {
+      versions = versions.filter((version) => version.type === 'Wine-GE')
+      return versions.filter((version) => !version.version.endsWith('LoL'))
+    } else {
+      return versions.filter((version) => version.type === repo)
+    }
   }
 
   const [wineVersions, setWineVersions] = useState<WineVersionInfo[]>(
@@ -86,10 +109,37 @@ export default React.memo(function WineManager(): JSX.Element | null {
     }
   }, [repository])
 
+  const wineVersionExplanation = useMemo(() => {
+    switch (repository.type) {
+      case 'Wine-GE':
+        return (
+          <div className="infoBox">
+            <FontAwesomeIcon icon={faWarning} color={'orange'} />
+            {t(
+              'wineExplanation.wine-ge',
+              'Wine-GE-Proton is a Wine variant created by Glorious Eggroll. It has been deprecated in favor of GE-Proton with the umu launcher.'
+            )}
+          </div>
+        )
+      case 'GE-Proton':
+        return (
+          <div className="infoBox">
+            <FontAwesomeIcon icon={faCheck} color={'green'} />
+            {t(
+              'wineExplanation.proton-ge',
+              'GE-Proton is a Proton variant created by Glorious Eggroll. It is meant to be used along with the umu launcher (default in Heroic).'
+            )}
+          </div>
+        )
+      default:
+        return <></>
+    }
+  }, [repository])
+
   return (
     <>
       <h4 style={{ paddingTop: 'var(--space-md)' }}>
-        {t('wine.manager.title', 'Wine Manager (Beta)')}
+        {t('wine.manager.title', 'Wine Manager')}
       </h4>
       <div className="wineManager">
         <span className="tabsWrapper">
@@ -124,6 +174,7 @@ export default React.memo(function WineManager(): JSX.Element | null {
             />
           </button>
         </span>
+        {wineVersionExplanation}
         {wineVersions.length ? (
           <div
             style={
@@ -155,4 +206,4 @@ export default React.memo(function WineManager(): JSX.Element | null {
       </div>
     </>
   )
-})
+}

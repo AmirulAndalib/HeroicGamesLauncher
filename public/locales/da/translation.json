@@ -71,9 +71,17 @@
             },
             "launchAborted": "Start afbrudt",
             "generic": {
-                "title": "Vælg EXE til at køre"
+                "title": "Vælg EXE til at køre",
+                "message": "generisk fejlmeddelelse"
             },
-            "moving": "Fejl ved flytning af spil {{error}}"
+            "moving": "Fejl ved flytning af spil {{error}}",
+            "ubisoft-connect": {
+                "message": "Installation af Ubisoft Connect i spillets præfiks mislykkedes. Tjek vores wiki-side på https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac for at installere det manuelt.",
+                "title": "Ubisoft Connect"
+            },
+            "legendary": {
+                "generic": "Der opstod en fejl! Prøv at logge ud og logge på din Epic-konto. {{newline}} {{error}}"
+            }
         },
         "info": {
             "update": {
@@ -143,7 +151,9 @@
             }
         },
         "default-steam-path": "Dampvej.",
-        "dontShowAgain": "Vis ikke igen"
+        "dontShowAgain": "Vis ikke igen",
+        "choose-nile-binary": "Vælg Nile binær",
+        "update": "Opdater"
     },
     "All": "Alle",
     "accessibility": {
@@ -176,7 +186,8 @@
     "status": {
         "installing": "Installerer",
         "processing": "Behandler filerne, vent venligst",
-        "logging": "Logger ind..."
+        "logging": "Logger ind...",
+        "preparing_login": "Forbereder login... "
     },
     "Assets": "Aktiver",
     "infobox": {
@@ -190,7 +201,8 @@
             "message": "Wine bruger det, der kaldes en WINEPREFIX til at indkapsle Windows-applikationer. Dette præfiks indeholder Wine-konfigurationsfilerne og en gengivelse af filhierarkiet af C: (hoveddisken på et Windows OS). I denne gengivelse af C:-drevet gemmes dine spillagringsfiler og afhængigheder installeret via winetricks."
         },
         "warning": "Advarsel",
-        "wine-path-invalid": "Vinstien er ugyldig, vælg venligst en anden."
+        "wine-path-invalid": "Vinstien er ugyldig, vælg venligst en anden.",
+        "wine-path-none-found": "Ingen vinversion blev fundet, download en fra Wine Manager"
     },
     "button": {
         "go_to_library": "Gå til biblioteket",
@@ -240,7 +252,12 @@
         "steam_path": {
             "info": "Denne sti lader Heroic bestemme, hvilken version af Proton Steam bruger, til at tilføje ikke-Steam-spil til Steam."
         },
-        "dxvkfpslimit": "Indstiller et billedhastighedsloft for DXVK-spil"
+        "dxvkfpslimit": "Indstiller et billedhastighedsloft for DXVK-spil",
+        "disable_logs": "Slå dette afkrydsningsfelt TIL for at deaktivere de fleste skrivninger til logfiler (kritisk information logges altid). Sørg for at slå denne indstilling FRA, før du rapporterer et problem.",
+        "title": {
+            "accessibility": "Tilgængelighed",
+            "settings": "Indstillinger"
+        }
     },
     "notify": {
         "uninstalled": "Afinstalleret",
@@ -270,7 +287,9 @@
             "finished": "Installation afsluttet",
             "imported": "Spil importeret",
             "startInstall": "Installation påbegyndt",
-            "error": "Installation mislykkedes"
+            "error": "Installation mislykkedes",
+            "failed": "Installation mislykkedes",
+            "paused": "Installation sat på pause"
         },
         "moved": "Færdig med flytning",
         "moving": "Flytende spil",
@@ -280,7 +299,9 @@
         "update": {
             "canceled": "Opdateret annulleret",
             "finished": "Opdatering Færdig",
-            "started": "Opdatering startet"
+            "started": "Opdatering startet",
+            "failed": "Opdatering fejlede",
+            "paused": "Opdatering sat på pause"
         },
         "new-heroic-version": "En ny Heroic-version blev frigivet!"
     },
@@ -397,7 +418,11 @@
         "hideChangelogsOnStartup": "Vis ikke ændringslogs ved opstart",
         "dxvkfpslimit": "Begræns FPS (DX9, 10 og 11)",
         "autoUpdateGames": "Opdater spil automatisk",
-        "ignoreGameUpdates": "Ignorer spilopdateringer"
+        "ignoreGameUpdates": "Ignorer spilopdateringer",
+        "disable_logs": "Deaktiver logfiler",
+        "addgamestoapplications": "Føj spil til applikationer automatisk",
+        "showMetalOverlay": "Vis statistikoverlejring",
+        "alt-nile-bin": "Vælg en alternativ Nile Binær"
     },
     "wine": {
         "manager": {
@@ -462,7 +487,13 @@
             "installing": "Installerer BattlEye Runtime...",
             "name": "BattlEye AntiCheat Runtime"
         },
-        "default_hint": "Ændringer i dette afsnit gælder kun som standardværdier ved installation af spil. Hvis du vil ændre indstillingerne for et allerede installeret spil, skal du bruge knappen Indstillinger på spilsiden."
+        "default_hint": "Ændringer i dette afsnit gælder kun som standardværdier ved installation af spil. Hvis du vil ændre indstillingerne for et allerede installeret spil, skal du bruge knappen Indstillinger på spilsiden.",
+        "advanced": {
+            "details": "detaljer",
+            "title": {
+                "resetHeroic": "Nulstil Heroic"
+            }
+        }
     },
     "title": {
         "allUnreal": "Uvirkeligt - Alt",
@@ -549,12 +580,14 @@
     "other": {
         "gogdl-version": "GOGDL-version: ",
         "legendary-version": "Legendarisk version: ",
-        "weblate": "Hjælp med at oversætte Heroic."
+        "weblate": "Hjælp med at oversætte Heroic.",
+        "nile-version": "Nile version: "
     },
     "platforms": {
         "win": "Windows",
         "linux": "Linux",
-        "mac": "Mac"
+        "mac": "Mac",
+        "browser": "Browser"
     },
     "toolbox": {
         "settings": {
@@ -617,7 +650,8 @@
         "alternative_method": "Alternativ login-metode",
         "epic": "Epic Games Login",
         "gog": "GOG login",
-        "message": "Log ind med din platform. Du kan logge ind på mere end én platform på samme tid."
+        "message": "Log ind med din platform. Du kan logge ind på mere end én platform på samme tid.",
+        "amazon": "Amazon login"
     },
     "placeholder": {
         "prefered_language": "2-tegn kode (dvs.: \"en\" eller \"fr\")",
@@ -625,7 +659,8 @@
         "alt-legendary-bin": "Bruger indbygget Legendary binær...",
         "egs-prefix": "Præfiks hvor EGS er installeret",
         "custom_themes_path": "Vælg stien for at søge efter tilpassede CSS-filer",
-        "dxvkfpsvalue": "Positiv heltalsværdi (f.eks. 30, 60, ...)"
+        "dxvkfpsvalue": "Positiv heltalsværdi (f.eks. 30, 60, ...)",
+        "alt-nile-bin": "Brug af indbygget Nile binær..."
     },
     "search": "Søg efter spil",
     "store": "Episk butik",
@@ -679,7 +714,9 @@
             "queued": "I kø",
             "canceled": "Annulleret",
             "empty": "Intet at downloade",
-            "remove": "Fjern fra downloads"
+            "remove": "Fjern fra downloads",
+            "pause": "Pause download",
+            "resume": "Genoptag download"
         }
     },
     "add_game": "Tilføj spil",
@@ -699,7 +736,8 @@
             "start-time": "Startede kl",
             "type": "Type"
         },
-        "title": "Downloads"
+        "title": "Downloads",
+        "ETA": "Estimeret tid"
     },
     "please-wait": "Vent venligst...",
     "label": {
@@ -711,5 +749,20 @@
     },
     "wiki_info": {
         "not_found": "Vi kunne ikke finde yderligere information."
+    },
+    "Open": "Åben",
+    "Update Available!": "Opdatering tilgængelig!",
+    "dlc": {
+        "actions": "Handlinger",
+        "installDlcs": "Installer alle DLC'er",
+        "noDlcFound": "Ingen DLC'er fundet",
+        "title": "Titel",
+        "size": "Størrelse"
+    },
+    "amazon": "Amazon",
+    "Amazon Games": "Amazon spil",
+    "prime-gaming": "Prime Gaming",
+    "winetricks": {
+        "install": "Installer"
     }
 }

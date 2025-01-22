@@ -1,28 +1,54 @@
 import React, { useContext } from 'react'
 
 import './App.css'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
-import Login from './screens/Login'
-import WebView from './screens/WebView'
-import { GamePage } from './screens/Game'
-import Library from './screens/Library'
-import WineManager from './screens/WineManager'
+import {
+  createHashRouter,
+  Navigate,
+  Outlet,
+  RouterProvider
+} from 'react-router-dom'
 import Sidebar from './components/UI/Sidebar'
-import Settings from './screens/Settings'
-import Accessibility from './screens/Accessibility'
 import ContextProvider from './state/ContextProvider'
-import { ControllerHints, OfflineMessage } from './components/UI'
-import DownloadManager from './screens/DownloadManager'
+import { ControllerHints, Help, OfflineMessage } from './components/UI'
 import DialogHandler from './components/UI/DialogHandler'
 import SettingsModal from './screens/Settings/components/SettingsModal'
 import ExternalLinkDialog from './components/UI/ExternalLinkDialog'
+import WindowControls from './components/UI/WindowControls'
+import classNames from 'classnames'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
+import LogFileUploadDialog from './components/UI/LogFileUploadDialog'
+import UploadedLogFilesList from './screens/Settings/sections/LogSettings/components/UploadedLogFilesList'
 
-function App() {
-  const { isSettingsModalOpen } = useContext(ContextProvider)
+function Root() {
+  const {
+    isSettingsModalOpen,
+    isRTL,
+    isFullscreen,
+    isFrameless,
+    experimentalFeatures,
+    help
+  } = useContext(ContextProvider)
+
+  const hasNativeOverlayControls = navigator['windowControlsOverlay']?.visible
+  const showOverlayControls = isFrameless && !hasNativeOverlayControls
+
+  const theme = createTheme({
+    direction: isRTL ? 'rtl' : 'ltr'
+  })
 
   return (
-    <div id="app" className="App">
-      <HashRouter>
+    <div
+      id="app"
+      className={classNames('App', {
+        isRTL,
+        frameless: isFrameless,
+        fullscreen: isFullscreen,
+        oldDesign: !experimentalFeatures.enableNewDesign
+      })}
+      // disable dragging for all elements by default
+      onDragStart={(e) => e.preventDefault()}
+    >
+      <ThemeProvider theme={theme}>
         <OfflineMessage />
         <Sidebar />
         <main className="content">
@@ -34,41 +60,87 @@ function App() {
             />
           )}
           <ExternalLinkDialog />
-          <Routes>
-            <Route path="/" element={<Navigate replace to="/library" />} />
-            <Route path="/library" element={<Library />} />
-            <Route path="login" element={<Login />} />
-            <Route path="epicstore" element={<WebView />} />
-            <Route path="gogstore" element={<WebView />} />
-            <Route path="wiki" element={<WebView />} />
-            <Route path="/gamepage">
-              <Route path=":runner">
-                <Route path=":appName" element={<GamePage />} />
-              </Route>
-            </Route>
-            <Route path="/store-page" element={<WebView />} />
-            <Route path="loginweb">
-              <Route path=":runner" element={<WebView />} />
-            </Route>
-            <Route path="settings">
-              <Route path=":runner">
-                <Route path=":appName">
-                  <Route path=":type" element={<Settings />} />
-                </Route>
-              </Route>
-            </Route>
-            <Route path="/wine-manager" element={<WineManager />} />
-            <Route path="/download-manager" element={<DownloadManager />} />
-            <Route path="/accessibility" element={<Accessibility />} />
-          </Routes>
+          <LogFileUploadDialog />
+          <UploadedLogFilesList />
+          <Outlet />
         </main>
         <div className="controller">
           <ControllerHints />
           <div className="simple-keyboard"></div>
         </div>
-      </HashRouter>
+        {showOverlayControls && <WindowControls />}
+        {experimentalFeatures.enableHelp && <Help items={help.items} />}
+      </ThemeProvider>
     </div>
   )
 }
 
-export default App
+function makeLazyFunc(
+  importedFile: Promise<Record<'default', React.ComponentType>>
+) {
+  return async () => {
+    const component = await importedFile
+    return { Component: component.default }
+  }
+}
+
+const router = createHashRouter([
+  {
+    path: '/',
+    element: <Root />,
+    children: [
+      {
+        index: true,
+        lazy: makeLazyFunc(import('./screens/Library'))
+      },
+      {
+        path: 'login',
+        lazy: makeLazyFunc(import('./screens/Login'))
+      },
+      {
+        path: 'store/:store',
+        lazy: makeLazyFunc(import('./screens/WebView'))
+      },
+      {
+        path: 'wiki',
+        lazy: makeLazyFunc(import('./screens/WebView'))
+      },
+      {
+        path: 'gamepage/:runner/:appName',
+        lazy: makeLazyFunc(import('./screens/Game/GamePage'))
+      },
+      {
+        path: 'store-page',
+        lazy: makeLazyFunc(import('./screens/WebView'))
+      },
+      {
+        path: 'loginweb/:runner',
+        lazy: makeLazyFunc(import('./screens/WebView'))
+      },
+      {
+        path: 'settings/:type',
+        lazy: makeLazyFunc(import('./screens/Settings'))
+      },
+      {
+        path: 'wine-manager',
+        lazy: makeLazyFunc(import('./screens/WineManager'))
+      },
+      {
+        path: 'download-manager',
+        lazy: makeLazyFunc(import('./screens/DownloadManager'))
+      },
+      {
+        path: 'accessibility',
+        lazy: makeLazyFunc(import('./screens/Accessibility'))
+      },
+      {
+        path: '*',
+        element: <Navigate replace to="/" />
+      }
+    ]
+  }
+])
+
+export default function App() {
+  return <RouterProvider router={router} />
+}

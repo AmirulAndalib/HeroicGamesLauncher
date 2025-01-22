@@ -56,7 +56,7 @@
                 "title": "Čini se da je mapa za video igre izbrisana. Da li želite da uklonite igru sa liste instaliranih?"
             },
             "generic": {
-                "message": "",
+                "message": "generička poruka o grešci",
                 "title": "Select EXE to Run"
             },
             "launchAborted": "Launch aborted",
@@ -78,7 +78,14 @@
                 "message": "Winetricks je vratio sljedeću grešku tokom izvršavanja: {{newLine}}{{error}}",
                 "title": "Winetricks greška"
             },
-            "moving": "Greška pri premještanju igre {{error}}"
+            "moving": "Greška pri premještanju igre {{error}}",
+            "ubisoft-connect": {
+                "message": "Instalacija Ubisoft Connecta u prefiksu igre nije uspjela. Provjerite našu wiki stranicu na https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac da je instalirate ručno.",
+                "title": "Ubisoft Connect"
+            },
+            "legendary": {
+                "generic": "Došlo je do greške! Pokušajte se odjaviti i prijaviti na svoj Epic račun. {{newline}} {{error}}"
+            }
         },
         "info": {
             "update": {
@@ -145,11 +152,18 @@
             "wine-change": {
                 "title": "Vino nije pronađeno!",
                 "message": "Nismo mogli pronaći odabranu verziju vina za lansiranje ovog naslova ({{selectedWine}}). {{newline}} Pronašli smo još jedan, da li želite da nastavite sa pokretanjem koristeći {{foundWine}} ?"
+            },
+            "sideload": {
+                "confirmExit": {
+                    "title": "Jeste li sigurni da se želite odjaviti?"
+                }
             }
         },
         "wineprefix": "Odaberite Wine Prefix mapu",
         "yes": "DA",
-        "dontShowAgain": "Ne prikazuj ponovo"
+        "dontShowAgain": "Ne prikazuj ponovo",
+        "choose-nile-binary": "Odaberite binarni Nil",
+        "update": "Update"
     },
     "button": {
         "cancel": "Cancel",
@@ -197,7 +211,8 @@
             "start-time": "Started at",
             "type": "Type"
         },
-        "title": "Downloads"
+        "title": "Downloads",
+        "ETA": "Predviđeno vrijeme"
     },
     "epic": {
         "offline-notification-body": "Online usluge možda neće raditi u potpunosti jer su Epic Games serveri van mreže!",
@@ -270,6 +285,14 @@
         "wine": {
             "part1": "Heroic traži verzije Wine, Proton i CrossOver u sljedećim mapama:",
             "part2": "Za druga mjesta koristite simboličku vezu do jednog od ovih mapa"
+        },
+        "disable_logs": "Uključite ovaj okvir za potvrdu kako biste onemogućili većinu upisivanja u datoteke dnevnika (kritične informacije se uvijek evidentiraju). Obavezno ISKLJUČITE ovu postavku prije nego što prijavite bilo kakav problem.",
+        "title": {
+            "accessibility": "Pristupačnost",
+            "settings": "Postavke",
+            "downloadManager": "Download Manager",
+            "wineManager": "Wine menadžer",
+            "library": "Biblioteka"
         }
     },
     "info": {
@@ -297,13 +320,15 @@
         "wine-repfix": {
             "message": "Wine koristi ono što se zove WINEPREFIX da inkapsulira Windows aplikacije. Ovaj prefiks sadrži Wine konfiguracijske datoteke i reprodukciju hijerarhije datoteka C: (glavni disk na Windows OS-u). U ovoj reprodukciji C: diska, pohranjuju se datoteke za spremanje vaše igre i ovisnosti instalirane putem winetricks-a."
         },
-        "wine-path-invalid": "Wine Path je nevažeći, molimo odaberite drugi."
+        "wine-path-invalid": "Wine Path je nevažeći, molimo odaberite drugi.",
+        "wine-path-none-found": "Nije pronađena nijedna Wine verzija, preuzmite je iz Wine Managera"
     },
     "install": {
         "path": "Izaberi put instalacije"
     },
     "label": {
-        "loading": "Loading"
+        "loading": "Loading",
+        "releaseDate": "Datum izlaska"
     },
     "library": {
         "refresh": "Osvježi",
@@ -324,7 +349,8 @@
         "alternative_method": "Alternative Login Method",
         "epic": "Epic Games Login",
         "gog": "GOG Login",
-        "message": "Login with your platform. You can login to more than one platform at the same time."
+        "message": "Login with your platform. You can login to more than one platform at the same time.",
+        "amazon": "Amazon Login"
     },
     "message": {
         "sync": "Sinhranizovanje završeno",
@@ -353,11 +379,13 @@
             "reparing": "Popravka završena"
         },
         "install": {
-            "canceled": "Instalacija otkazana",
+            "canceled": "Instalacija Otkazana",
             "error": "Instalacija neuspješna",
-            "finished": "Instalacija završena",
+            "finished": "Instalacija Završena",
             "imported": "Video igra uvezena",
-            "startInstall": "Instalacija započeta"
+            "startInstall": "Instalacija započeta",
+            "failed": "Instalacija neuspješna",
+            "paused": "Instalacija je pauzirana"
         },
         "moved": "Premještanje završeno",
         "moving": "Igra se premješta",
@@ -367,19 +395,21 @@
         },
         "uninstalled": "Deinstalirano",
         "update": {
-            "canceled": "Ažuriranje otkazano",
+            "canceled": "Ažuriranje Otkazano",
             "finished": "Ažuriranje završeno",
-            "started": "Ažuriranje započeto"
+            "started": "Ažuriranje započeto",
+            "failed": "Ažuriranje nije uspjelo",
+            "paused": "Ažuriranje je pauzirano"
         }
     },
     "offline-message": {
-        "hint": "We are checking the connectivity against:{{newline}}github.com,{{newline}}gog.com and{{newline}}store.epicgames.com",
+        "hint": "Provjeravamo povezanost sa: {{newline}}github.com, {{newline}}gog.com, {{newline}}store.epicgames.com i {{newline}}cloudflare-dns.com",
         "ignore": "Ignore",
         "offline": "Offline",
         "offline-retry-in": "Offline. Retrying in {{seconds}} seconds.",
         "retrying": "Retrying"
     },
-    "Open": "",
+    "Open": "Otvori",
     "options": {
         "advanced": {
             "key": "Ime varijable",
@@ -414,21 +444,24 @@
     "other": {
         "gogdl-version": "GOGDL Verzija: ",
         "legendary-version": "Legendary verzija: ",
-        "weblate": "Pomozi u prijevodu Heroica."
+        "weblate": "Pomozi u prijevodu Heroica.",
+        "nile-version": "Nil verzija: "
     },
     "Other": "Other",
     "placeholder": {
         "alt-gogdl-bin": "Korištenje ugrađenog GOGDL binarne datoteke",
         "alt-legendary-bin": "Korištenje ugrađene Legendary binarne datoteke...",
         "custom_themes_path": "Select the path to look for custom CSS files",
-        "dxvkfpsvalue": "Postive integer value (e.g. 30, 60, ...)",
+        "dxvkfpsvalue": "Positive integer value (e.g. 30, 60, ...)",
         "egs-prefix": "Prefiks gdje je EGS instaliran",
-        "prefered_language": "kod od 2 znaka (tj.: \"en\" ili \"fr\")"
+        "prefered_language": "kod od 2 znaka (tj.: \"en\" ili \"fr\")",
+        "alt-nile-bin": "Koristeći ugrađeni binarni Nil..."
     },
     "platforms": {
         "linux": "Linux",
         "mac": "Mac",
-        "win": "Windows"
+        "win": "Windows",
+        "browser": "Pretraživač"
     },
     "please-wait": "Please wait...",
     "progress": "Napredak",
@@ -440,7 +473,9 @@
             "empty": "Nothing to download",
             "finished": "Completed",
             "queued": "Queued",
-            "remove": "Remove from Downloads"
+            "remove": "Remove from Downloads",
+            "pause": "Pauzirajte preuzimanje",
+            "resume": "Nastavi preuzimanje"
         }
     },
     "Recent": "Igrano nedavno",
@@ -456,7 +491,7 @@
         "autovkd3d": "Automatska instalacija/ažuriranje VKD3D na prefiksu",
         "change-target-exe": "Odaberite alternativni EXE za pokretanje",
         "checkForUpdatesOnStartup": "Provjeri ima li Heroic Updates pri pokretanju",
-        "crossover-version": "Crossover verzija",
+        "crossover-version": "Crossover/Wine verzija",
         "custom_themes_path": "Custom Themes Path",
         "customWineProton": "Prilagođeni putevi za Wine/Proton",
         "darktray": "Koristite Dark Tray ikonu",
@@ -506,11 +541,14 @@
         "log": {
             "copy-to-clipboard": "Kopirajte sadržaj zapisnika u međuspremnik",
             "current-log": "Trenutni dnevnik",
-            "instructions": "Pridružite se našem Discordu i potražite kanal koji odgovara vašem operativnom sistemu. Podijelite sadržaj ovdje prikazanih dnevnika i uključite jasan opis problema sa svim relevantnim informacijama i detaljima.",
+            "instructions": "Pridružite se našem Discordu i potražite odjeljak \"#-podrška\". Pročitajte zakačenu nit \"Prvo me pročitajte | Često postavljana pitanja\" i slijedite upute da podijelite ove zapise i sve relevantne informacije o svom problemu.",
             "instructions_title": "Kako prijaviti problem?",
             "last-log": "Zadnji dnevnik",
             "no-file": "Nije pronađena datoteka zapisnika",
-            "show-in-folder": "Prikaži datoteku zapisnika u mapi"
+            "show-in-folder": "Prikaži datoteku zapisnika u mapi",
+            "upload": {
+                "actions": "Action"
+            }
         },
         "mangohud": "Omogući Mangohud (Mangohud treba biti instaliran)",
         "manualsync": {
@@ -552,7 +590,13 @@
         "wineprefix": "WinePrefix mapa",
         "wineversion": "Wine verzija",
         "ignoreGameUpdates": "Zanemari ažuriranja igre",
-        "autoUpdateGames": "Automatski ažuriraj igre"
+        "autoUpdateGames": "Automatski ažuriraj igre",
+        "disable_logs": "Onemogući dnevnike",
+        "addgamestoapplications": "Automatski dodajte igre u aplikacije",
+        "showMetalOverlay": "Prikaži preklapanje statistike",
+        "alt-nile-bin": "Odaberite alternativnu Nilsku binarnu",
+        "autodxvknvapi": "Automatska instalacija/ažuriranje DXVK-NVAPI na prefiksu",
+        "msync": "Omogućite Esync"
     },
     "settings": {
         "battlEyeRuntime": {
@@ -586,7 +630,7 @@
             "general": "Generalno",
             "log": "Prijavite se",
             "other": "Drugi",
-            "sync": "Spremi-Sinhroniziraj",
+            "sync": "Sinhronizacija Čuvanja u Oblaku",
             "wineExt": "Wine Extensions"
         },
         "open-config-file": "Otvorite konfig. fajl",
@@ -594,6 +638,14 @@
         "saves": {
             "label": "Sačuvaj lokaciju:",
             "warning": "Funkcija čuvanja u oblaku je u beta verziji, napravite sigurnosnu kopiju vaših sačuvanih podataka prije sinhronizacije (u slučaju da nešto krene po zlu)"
+        },
+        "advanced": {
+            "title": {
+                "resetHeroic": "Resetujte Heroic"
+            },
+            "clearCache": {
+                "help9": "Game Settings"
+            }
         }
     },
     "Settings": "Postavke",
@@ -604,7 +656,8 @@
     "status": {
         "installing": "Instalira se",
         "logging": "Prijavljivanje",
-        "processing": "Obrada datoteka, pričekajte"
+        "processing": "Obrada datoteka, pričekajte",
+        "preparing_login": "Priprema za prijavu... "
     },
     "store": "Epic Store",
     "stores": "Trgovine",
@@ -630,7 +683,7 @@
     "two_col_table": {
         "save_hint": "Promjene u ovoj tabeli se ne pohranjuju automatski. Kliknite na dugme +"
     },
-    "Update Available!": "",
+    "Update Available!": "Dostupno ažuriranje!",
     "userselector": {
         "discord": "Discord",
         "logging_out": "Logging out",
@@ -666,5 +719,23 @@
     },
     "wiki_info": {
         "not_found": "Nismo mogli pronaći dodatne informacije."
+    },
+    "dlc": {
+        "actions": "Akcije",
+        "installDlcs": "Instaliraj sve DLC-ove",
+        "noDlcFound": "Nije pronađen nijedan DLC",
+        "size": "Veličina",
+        "title": "Title"
+    },
+    "amazon": "Amazon",
+    "Amazon Games": "Amazon igre",
+    "prime-gaming": "Prime Gaming",
+    "winetricks": {
+        "install": "Install",
+        "loading": "Loading"
+    },
+    "category-settings": {
+        "cancel": "Cancel",
+        "warning": "Warning"
     }
 }

@@ -5,7 +5,7 @@
 }
 
 .helpIcon {
-  padding-left: 5px;
+  padding-inline-start: 5px;
   color: var(--accent);
 }
 
@@ -13,7 +13,7 @@
   .defaults-hint {
     background: var(--anticheat-denied, var(--status-danger));
     color: var(--brand-text-01);
-    text-align: left;
+    text-align: start;
     padding: var(--space-md);
     display: flex;
     gap: var(--space-md);
@@ -23,6 +23,26 @@
   section:not(:nth-of-type(0)) {
     padding-top: var(--space-xl);
     min-width: 500px;
+  }
+}
+
+.MuiTabs-root {
+  padding-bottom: var(--space-xs);
+
+  .MuiTabs-scroller {
+    .MuiTabs-indicator {
+      background-color: var(--accent);
+    }
+
+    .MuiTabs-flexContainer {
+      .MuiTab-root {
+        color: var(--text-default);
+      }
+
+      .Mui-selected {
+        color: var(--accent);
+      }
+    }
   }
 }
 
@@ -44,4 +64,29 @@ details {
     padding: var(--space-xs) 0;
     font-size: var(--text-xl);
   }
+}
+
+.gamescopeSettings {
+  .selectFieldWrapper {
+    grid-template-areas:
+      'label info'
+      'select select';
+    grid-template-columns: max-content 1fr;
+  }
+
+  .textInputFieldWrapper {
+    grid-template-areas:
+      'label info'
+      'input input';
+    grid-template-columns: max-content 1fr;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+  }
+}
+
+.Field {
+  text-align: left;
 }

@@ -1,54 +1,70 @@
+import { getInfoFromGamesDB } from 'backend/wiki_game_info/gamesdb/utils'
+import { getInfoFromProtonDB } from 'backend/wiki_game_info/protondb/utils'
+import { getSteamDeckComp } from 'backend/wiki_game_info/steamdeck/utils'
 import { wikiGameInfoStore } from './electronStore'
 import { removeSpecialcharacters } from '../utils'
-import { WikiInfo } from 'common/types'
+import { Runner, SteamInfo, WikiInfo } from 'common/types'
 import { logError, logInfo, LogPrefix } from '../logger/logger'
 import { getInfoFromAppleGamingWiki } from './applegamingwiki/utils'
 import { getHowLongToBeat } from './howlongtobeat/utils'
 import { getInfoFromPCGamingWiki } from './pcgamingwiki/utils'
-import { isMac } from '../constants'
+import { isMac, isLinux } from '../constants'
+import { getUmuId } from './umu/utils'
 
 export async function getWikiGameInfo(
   title: string,
-  gogID?: string
+  appName: string,
+  runner: Runner
 ): Promise<WikiInfo | null> {
   try {
     title = removeSpecialcharacters(title)
 
     // check if we have a cached response
-    const cachedResponse = wikiGameInfoStore.get_nodefault(title)
+    const cachedResponse = wikiGameInfoStore.get(title)
     if (cachedResponse) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
         LogPrefix.ExtraGameInfo
       )
-
-      const oneMonthAgo = new Date()
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-
-      const timestampLastFetch = new Date(cachedResponse.timestampLastFetch)
-      if (timestampLastFetch > oneMonthAgo) {
-        return cachedResponse
-      }
-
-      logInfo(
-        [`Cached ExtraGameInfo data for ${title} outdated.`],
-        LogPrefix.ExtraGameInfo
-      )
+      return cachedResponse
     }
 
     logInfo(`Getting ExtraGameInfo data for ${title}`, LogPrefix.ExtraGameInfo)
 
-    const [pcgamingwiki, howlongtobeat, applegamingwiki] = await Promise.all([
-      getInfoFromPCGamingWiki(title, gogID),
-      getHowLongToBeat(title),
-      isMac ? getInfoFromAppleGamingWiki(title) : null
-    ])
+    const [pcgamingwiki, howlongtobeat, gamesdb, applegamingwiki, umuId] =
+      await Promise.all([
+        getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
+        getHowLongToBeat(title),
+        getInfoFromGamesDB(title, appName, runner),
+        isMac ? getInfoFromAppleGamingWiki(title) : null,
+        isLinux ? getUmuId(appName, runner) : null
+      ])
+
+    let steamInfo = null
+    if (isLinux) {
+      // gamesdb is more accurate since we always query by appName
+      // pcgamingwiki is queried by title in most cases
+      const steamID = gamesdb?.steamID || pcgamingwiki?.steamID
+      const [protondb, steamdeck] = await Promise.all([
+        getInfoFromProtonDB(steamID),
+        getSteamDeckComp(steamID)
+      ])
+
+      if (protondb || steamdeck) {
+        steamInfo = {
+          compatibilityLevel: protondb?.level,
+          steamDeckCatagory: steamdeck?.category
+        } as SteamInfo
+      }
+    }
 
     const wikiGameInfo = {
-      timestampLastFetch: Date(),
       pcgamingwiki,
       applegamingwiki,
-      howlongtobeat
+      howlongtobeat,
+      gamesdb,
+      steamInfo,
+      umuId
     }
 
     wikiGameInfoStore.set(title, wikiGameInfo)

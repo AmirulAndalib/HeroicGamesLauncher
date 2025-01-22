@@ -1,61 +1,49 @@
 import './index.scss'
 
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useState } from 'react'
 
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 import { getGameInfo } from 'frontend/helpers'
 
-import { ProgressDialog } from 'frontend/components/UI/ProgressDialog'
 import SettingsContext from '../../SettingsContext'
 import ContextProvider from 'frontend/state/ContextProvider'
+import { Winetricks } from 'frontend/components/UI'
 
 export default function Tools() {
   const { t } = useTranslation()
   const [winecfgRunning, setWinecfgRunning] = useState(false)
   const [winetricksRunning, setWinetricksRunning] = useState(false)
-  const [progress, setProgress] = useState<string[]>([])
+  const [runExeRunning, setRunExeRunning] = useState(false)
   const { appName, runner, isDefault } = useContext(SettingsContext)
   const { platform } = useContext(ContextProvider)
   const isWindows = platform === 'win32'
 
-  if (isDefault || isWindows) {
+  if (isDefault || isWindows || !runner) {
     return <></>
   }
 
-  type Tool = 'winecfg' | 'winetricks' | string
-  async function callTools(tool: Tool, exe?: string) {
-    if (tool === 'winetricks') {
-      setWinetricksRunning(true)
+  const callTools = async (tool: 'winecfg' | 'runExe', exe?: string) => {
+    const toolStates = {
+      winecfg: setWinecfgRunning,
+      runExe: setRunExeRunning
     }
-    if (tool === 'winecfg') {
-      setWinecfgRunning(true)
+
+    if (tool in toolStates) {
+      toolStates[tool](true)
     }
+
     await window.api.callTool({
       tool,
       exe,
       appName,
       runner
     })
-    setWinetricksRunning(false)
-    setWinecfgRunning(false)
-  }
 
-  useEffect(() => {
-    const onProgress = (e: Electron.IpcRendererEvent, messages: string[]) => {
-      setProgress(messages)
+    if (tool in toolStates) {
+      toolStates[tool](false)
     }
-
-    const removeWinetricksProgressListener =
-      window.api.handleProgressOfWinetricks(onProgress)
-
-    //useEffect unmount
-    return removeWinetricksProgressListener
-  }, [])
-
-  useEffect(() => {
-    setProgress([])
-  }, [winetricksRunning])
+  }
 
   const handleRunExe = async () => {
     let exe = ''
@@ -76,7 +64,7 @@ export default function Tools() {
     }
   }
 
-  function dropHandler(ev: React.DragEvent<HTMLSpanElement>) {
+  const dropHandler = async (ev: React.DragEvent<HTMLSpanElement>) => {
     // Prevent default behavior (Prevent file from being opened)
     ev.preventDefault()
 
@@ -98,18 +86,19 @@ export default function Tools() {
     ev.preventDefault()
   }
 
+  function openWinetricksDialog() {
+    setWinetricksRunning(true)
+  }
+
+  function winetricksDialogClosed() {
+    setWinetricksRunning(false)
+  }
+
   return (
     <>
       <div data-testid="toolsSettings" className="settingsTools">
         {winetricksRunning && (
-          <ProgressDialog
-            title={'Winetricks'}
-            progress={progress}
-            showCloseButton={false}
-            onClose={() => {
-              return
-            }}
-          />
+          <Winetricks onClose={winetricksDialogClosed} runner={runner} />
         )}
         <div className="toolsWrapper">
           <button
@@ -121,21 +110,20 @@ export default function Tools() {
           </button>
           <button
             data-testid="wineTricks"
-            className={classNames('button outline', {
-              active: winetricksRunning
-            })}
-            onClick={async () => callTools('winetricks')}
+            className="button outline"
+            onClick={async () => openWinetricksDialog()}
           >
             <span className="toolTitle">Winetricks</span>
           </button>
           <a
-            onDrop={(ev) => dropHandler(ev)}
+            onDrop={async (ev) => dropHandler(ev)}
             onDragOver={(ev) => dragOverHandler(ev)}
-            className="button outline drag"
+            className={classNames('button outline drag', {
+              active: runExeRunning
+            })}
             onClick={handleRunExe}
           >
-            {t('setting.runexe.title')}
-            <br />
+            {t('setting.runexe.title')} <br />
             <span>{t('setting.runexe.message')}</span>
           </a>
         </div>

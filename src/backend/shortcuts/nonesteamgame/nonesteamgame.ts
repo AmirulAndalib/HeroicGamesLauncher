@@ -7,7 +7,7 @@ import {
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'graceful-fs'
 import { readFileSync } from 'fs-extra'
 import { join } from 'path'
-import { GameInfo, SideloadGame } from 'common/types'
+import { GameInfo } from 'common/types'
 import { ShortcutsResult } from '../types'
 import { getIcon } from '../utils'
 import {
@@ -23,27 +23,11 @@ import { logError, logInfo, LogPrefix, logWarning } from '../../logger/logger'
 import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../../dialog/dialog'
 import { GlobalConfig } from '../../config'
-import { getMainWindow } from '../../main_window'
+import { getWikiGameInfo } from 'backend/wiki_game_info/wiki_game_info'
 
 const getSteamUserdataDir = async () => {
   const { defaultSteamPath } = GlobalConfig.get().getSettings()
   return join(defaultSteamPath.replaceAll("'", ''), 'userdata')
-}
-
-const generateImage = async (
-  src: string,
-  width: number,
-  height: number
-): Promise<string> => {
-  const window = getMainWindow()
-
-  if (!window) {
-    return Promise.resolve('')
-  }
-
-  return window.webContents.executeJavaScript(
-    `window.imageData("${src}", ${width}, ${height})`
-  )
 }
 
 /**
@@ -161,6 +145,17 @@ function hasParameterCaseInsensitive(object: ShortcutEntry, key: string) {
   return Object.keys(object).some((k) => k.toLowerCase() === keyAsLowercase)
 }
 
+/** Return AppName property case insensitive
+ *  @param {Object} object
+ *  @returns Title of Shortcut Entry
+ */
+function getAppName(object: ShortcutEntry) {
+  const foundkey =
+    Object.keys(object).find((key) => key.toLowerCase() === 'appname') ??
+    'AppName'
+  return object[foundkey]
+}
+
 /**
  * Check if the parsed object of a shortcuts.vdf is valid.
  * @param object @see Partial<ShortcutObject>
@@ -200,33 +195,27 @@ function checkIfShortcutObjectIsValid(
  */
 function checkIfAlreadyAdded(object: Partial<ShortcutObject>, title: string) {
   const shortcuts = object.shortcuts ?? []
-  return shortcuts.findIndex((entry) => entry.AppName === title)
+  return shortcuts.findIndex((entry) => getAppName(entry) === title)
 }
 
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf
  * @param gameInfo @see GameInfo of the game to add
- * @param steamUserdataDir Path to steam userdata directory, optional
- * @param bkgDataUrl data url string for the background image, optional
- * @param bigPicDataUrl data url of the Big Picture image, optional
  * @returns boolean
  */
 async function addNonSteamGame(props: {
-  gameInfo: GameInfo | SideloadGame
+  gameInfo: GameInfo
   steamUserdataDir?: string
   bkgDataUrl?: string
   bigPicDataUrl?: string
 }): Promise<boolean> {
-  const steamUserdataDir =
-    props.steamUserdataDir || (await getSteamUserdataDir())
-
-  let bkgDataUrl = props.bkgDataUrl
-  let bigPicDataUrl = props.bigPicDataUrl
-
-  if (bkgDataUrl === undefined || bigPicDataUrl === undefined) {
-    bkgDataUrl = await generateImage(props.gameInfo.art_cover, 1920, 620)
-    bigPicDataUrl = await generateImage(props.gameInfo.art_cover, 920, 430)
-  }
+  const steamUserdataDir = await getSteamUserdataDir()
+  const wikiInfo = await getWikiGameInfo(
+    props.gameInfo.title,
+    props.gameInfo.app_name,
+    props.gameInfo.runner
+  )
+  const steamID = wikiInfo?.pcgamingwiki?.steamID ?? wikiInfo?.gamesdb?.steamID
 
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)
 
@@ -282,7 +271,7 @@ async function addNonSteamGame(props: {
     } else if (!isWindows && process.env.APPIMAGE) {
       newEntry.Exe = `"${process.env.APPIMAGE}"`
     } else if (isWindows && process.env.PORTABLE_EXECUTABLE_FILE) {
-      newEntry.Exe = `"${process.env.PORTABLE_EXECUTABLE_FILE}`
+      newEntry.Exe = `"${process.env.PORTABLE_EXECUTABLE_FILE}"`
       newEntry.StartDir = `"${process.env.PORTABLE_EXECUTABLE_DIR}"`
     }
 
@@ -304,8 +293,7 @@ async function addNonSteamGame(props: {
         otherGridAppID: generateShortAppId(newEntry.Exe, newEntry.AppName)
       },
       gameInfo: props.gameInfo,
-      bkgDataUrl: bkgDataUrl,
-      bigPicDataUrl: bigPicDataUrl
+      steamID: steamID
     })
 
     const args = []
@@ -313,7 +301,10 @@ async function addNonSteamGame(props: {
     if (!isWindows) {
       args.push('--no-sandbox')
     }
-    args.push(`"heroic://launch/${props.gameInfo.app_name}"`)
+
+    const { runner, app_name } = props.gameInfo
+
+    args.push(`"heroic://launch?appName=${app_name}&runner=${runner}"`)
     newEntry.LaunchOptions = args.join(' ')
     if (isFlatpak) {
       newEntry.LaunchOptions = `run com.heroicgameslauncher.hgl ${newEntry.LaunchOptions}`
@@ -394,12 +385,10 @@ async function addNonSteamGame(props: {
  * @returns none
  */
 async function removeNonSteamGame(props: {
-  gameInfo: GameInfo | SideloadGame
+  gameInfo: GameInfo
   steamUserdataDir?: string
 }): Promise<void> {
-  const steamUserdataDir =
-    props.steamUserdataDir || (await getSteamUserdataDir())
-
+  const steamUserdataDir = await getSteamUserdataDir()
   const { folders, error } = checkSteamUserDataDir(steamUserdataDir)
 
   // we don't show a error here.
@@ -441,7 +430,7 @@ async function removeNonSteamGame(props: {
     const shortcutObj = content.shortcuts.at(index)!
 
     const exe = shortcutObj.Exe
-    const appName = shortcutObj.AppName
+    const appName = getAppName(shortcutObj)
 
     // remove
     content.shortcuts.splice(index, 1)
@@ -507,7 +496,7 @@ async function removeNonSteamGame(props: {
  * @returns boolean
  */
 async function isAddedToSteam(props: {
-  gameInfo: GameInfo | SideloadGame
+  gameInfo: GameInfo
   steamUserdataDir?: string
 }): Promise<boolean> {
   const steamUserdataDir =

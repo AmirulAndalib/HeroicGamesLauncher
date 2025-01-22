@@ -4,12 +4,12 @@ import { GameConfigVersion, GameSettings } from 'common/types'
 import { GlobalConfig } from './config'
 import {
   currentGameConfigVersion,
-  heroicConfigPath,
-  heroicGamesConfigPath,
-  isLinux,
+  configPath,
+  gamesConfigPath,
   isMac,
   isWindows,
-  userHome
+  userHome,
+  defaultWinePrefix
 } from './constants'
 import { logError, logInfo, LogPrefix } from './logger/logger'
 import { join } from 'path'
@@ -34,7 +34,7 @@ abstract class GameConfig {
 
   protected constructor(appName: string) {
     this.appName = appName
-    this.path = join(heroicGamesConfigPath, appName + '.json')
+    this.path = join(gamesConfigPath, appName + '.json')
   }
 
   /**
@@ -46,7 +46,7 @@ abstract class GameConfig {
    */
   public static get(appName: string): GameConfig {
     let version: GameConfigVersion
-    const path = join(heroicGamesConfigPath, appName + '.json')
+    const path = join(gamesConfigPath, appName + '.json')
     // Config file doesn't already exist, make one with the current version.
     if (!existsSync(path)) {
       version = currentGameConfigVersion
@@ -158,7 +158,7 @@ abstract class GameConfig {
    */
   protected async load() {
     // Config file doesn't exist, make one.
-    if (!existsSync(heroicConfigPath)) {
+    if (!existsSync(configPath)) {
       this.resetToDefaults()
     }
     // Always upgrade before loading to avoid errors.
@@ -169,7 +169,7 @@ abstract class GameConfig {
     } else {
       // No upgrades necessary, load config.
       // `this.version` should be `currentGameConfigVersion` at this point.
-      this.config = (await this.getSettings()) as GameSettings
+      this.config = await this.getSettings()
     }
   }
 }
@@ -207,11 +207,13 @@ class GameConfigV0 extends GameConfig {
 
     const {
       autoInstallDxvk,
+      autoInstallDxvkNvapi,
       autoInstallVkd3d,
       preferSystemLibs,
       autoSyncSaves,
       enableEsync,
       enableFSR,
+      enableMsync,
       enableFsync,
       maxSharpness,
       launcherArgs,
@@ -227,17 +229,24 @@ class GameConfigV0 extends GameConfig {
       winePrefix,
       wineCrossoverBottle,
       wineVersion,
-      useSteamRuntime
+      useSteamRuntime,
+      eacRuntime,
+      battlEyeRuntime,
+      beforeLaunchScriptPath,
+      afterLaunchScriptPath,
+      gamescope
     } = GlobalConfig.get().getSettings()
 
     // initialize generic defaults
     // TODO: I know more values can be moved that are not used in windows
     const defaultSettings = {
       autoInstallDxvk,
+      autoInstallDxvkNvapi,
       autoInstallVkd3d,
       preferSystemLibs,
       autoSyncSaves,
       enableEsync,
+      enableMsync,
       enableFSR,
       enableFsync,
       maxSharpness,
@@ -252,7 +261,12 @@ class GameConfigV0 extends GameConfig {
       targetExe,
       useGameMode,
       useSteamRuntime,
-      language: '' // we want to fallback to '' always here, fallback lang for games should be ''
+      battlEyeRuntime,
+      eacRuntime,
+      language: '', // we want to fallback to '' always here, fallback lang for games should be ''
+      beforeLaunchScriptPath,
+      afterLaunchScriptPath,
+      gamescope
     } as GameSettings
 
     let gameSettings = {} as GameSettings
@@ -269,16 +283,13 @@ class GameConfigV0 extends GameConfig {
       // set specific keys depending on the platform
       if (isMac) {
         defaultSettings.wineCrossoverBottle = wineCrossoverBottle
-      } else if (isLinux) {
-        defaultSettings.winePrefix = winePrefix || `${userHome}/.wine`
+      }
 
-        // fix winePrefix if needed
-        if (gameSettings.winePrefix?.includes('~')) {
-          gameSettings.winePrefix = gameSettings.winePrefix.replace(
-            '~',
-            userHome
-          )
-        }
+      defaultSettings.winePrefix = winePrefix || defaultWinePrefix
+
+      // fix winePrefix if needed
+      if (gameSettings.winePrefix?.includes('~')) {
+        gameSettings.winePrefix = gameSettings.winePrefix.replace('~', userHome)
       }
     }
 

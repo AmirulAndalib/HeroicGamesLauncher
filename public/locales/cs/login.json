@@ -1,6 +1,11 @@
 {
     "button": {
-        "login": "Přihlásit se"
+        "login": "Přihlásit se",
+        "copied": "Zkopírováno!",
+        "open": "Otevřít odkaz",
+        "copy": "kopírovat",
+        "error": "Chyba, zkuste jiný kód",
+        "loading": "Načítání"
     },
     "message": {
         "part1": "Aby jste se mohli přihlásit a instalovat vaše hry, musíte postupovat podle kroků níže:",

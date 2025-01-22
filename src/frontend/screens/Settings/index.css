@@ -13,14 +13,16 @@
 
 .Settings .Field,
 .Accessibility .Field,
-.InstallModal__dialog .Field {
+.InstallModal__dialog .Field,
+.ModifyInstall__dialog .Field {
   padding: var(--space-md) 0px;
   width: 100%;
 }
 
 .Settings .Field label,
 .Accessibility .Field label,
-.InstallModal__dialog .Field label {
+.InstallModal__dialog .Field label,
+.ModifyInstall__dialog .Field label {
   cursor: default;
   margin-bottom: var(--space-md);
   font: var(--font-secondary-regular);
@@ -47,11 +49,11 @@
 }
 
 .headerTitle > svg {
-  margin-left: 12px;
+  margin-inline-start: 12px;
 }
 
 .settingSubheader {
-  text-align: left;
+  text-align: start;
   margin-top: 0;
 }
 
@@ -68,7 +70,8 @@
 
 .save {
   cursor: default;
-  margin: var(--space-md) 0 0 var(--space-md);
+  margin-block: var(--space-md) 0;
+  margin-inline: var(--space-md) 0;
   padding-block-end: var(--space-xs);
   display: flex;
   align-items: center;
@@ -99,6 +102,15 @@
 
 .warning {
   color: yellow;
+  font-size: var(--text-sm);
+  width: 100%;
+  max-width: 513px;
+  white-space: break-spaces;
+  padding-top: var(--space-3xs);
+}
+
+.error {
+  color: red;
   font-size: var(--text-sm);
   width: 100%;
   max-width: 513px;
@@ -201,8 +213,8 @@ a {
   margin: 0;
 }
 
-.eosSettings {
-  text-align: left;
+.advancedSetting {
+  text-align: start;
 }
 
 .settingsWrapper .button {
@@ -217,5 +229,5 @@ a {
 }
 
 .infoBox.saves-warning svg {
-  padding-right: 10px;
+  padding-inline-end: 10px;
 }

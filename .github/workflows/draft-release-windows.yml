@@ -11,11 +11,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: ./.github/actions/install-deps
+      - uses: actions/setup-python@v4
         with:
-          node-version: '18'
-      - run: npm install --legacy-peer-deps
-      - run: npm run release:win
+          python-version: '3.10'
+      - run: python3 -m pip install castlabs-evs
+      - run: pnpm release:win
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
           GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+          EVS_ACCOUNT_NAME: ${{ secrets.EVS_ACCOUNT_NAME }}
+          EVS_PASSWD: ${{ secrets.EVS_PASSWD }}

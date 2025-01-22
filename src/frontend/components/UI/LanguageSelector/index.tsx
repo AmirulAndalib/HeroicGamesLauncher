@@ -35,6 +35,7 @@ const languageLabels: { [key: string]: string } = {
   fi: 'Suomen kieli',
   fr: 'Français',
   gl: 'Galego',
+  he: 'עברית',
   hu: 'Magyar',
   hr: 'Hrvatski',
   ja: '日本語',
@@ -50,13 +51,14 @@ const languageLabels: { [key: string]: string } = {
   ro: 'limba română',
   ru: 'Русский',
   sk: 'slovenčina',
+  sr: 'српски језик',
   sv: 'Svenska',
   ta: 'தமிழ்',
   tr: 'Türkçe',
   uk: 'украї́нська мо́ва',
   vi: 'tiếng Việt',
-  zh_Hans: '简化字',
-  zh_Hant: '漢語'
+  zh_Hans: '简体中文',
+  zh_Hant: '正體字'
 }
 
 const languageFlags: { [key: string]: string } = {
@@ -77,6 +79,7 @@ const languageFlags: { [key: string]: string } = {
   fi: '🇫🇮',
   fr: '🇫🇷',
   gl: '🇪🇸',
+  he: '🇮🇱',
   hu: '🇭🇺',
   hr: '🇭🇷',
   ja: '🇯🇵',
@@ -91,6 +94,7 @@ const languageFlags: { [key: string]: string } = {
   pt_BR: '🇧🇷',
   ro: '🇷🇴',
   ru: '🇷🇺',
+  sr: '🇷🇸',
   sk: '🇸🇰',
   sv: '🇸🇪',
   ta: '🇮🇳',
@@ -98,7 +102,7 @@ const languageFlags: { [key: string]: string } = {
   uk: '🇺🇦',
   vi: '🇻🇳',
   zh_Hans: '🇨🇳',
-  zh_Hant: '🇨🇳'
+  zh_Hant: '🇹🇼'
 }
 
 export default function LanguageSelector({

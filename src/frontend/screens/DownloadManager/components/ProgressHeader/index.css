@@ -54,19 +54,20 @@
 .realtimeDownloadStat {
   white-space: nowrap;
   margin: 0px;
+  width: 6em;
+  text-align: start;
 }
 
 .realtimeDownloadStatLabel {
   margin: auto;
   padding: auto;
-  text-align: left;
+  text-align: start;
   height: auto;
 }
 
 .realtimeDownloadStatContainer {
   align-self: center;
   margin: 1em;
-  box-sizing: border-box;
 }
 
 .downloadRateChart {

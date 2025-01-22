@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { ChangelogModal } from '../../../ChangelogModal'
+import './index.css'
 
 type Release = {
   html_url: string
@@ -31,7 +32,7 @@ export default React.memo(function HeroicVersion() {
     window.api.getHeroicVersion().then((version) => {
       if (version !== lastVersion) {
         window.api.logInfo('Updated to a new version, cleaaning up the cache.')
-        window.api.clearCache(false)
+        window.api.clearCache(false, true)
       }
       storage.setItem('last_version', JSON.stringify(version))
       setHeroicVersion(version)

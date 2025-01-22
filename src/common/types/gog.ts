@@ -1,4 +1,4 @@
-import { GOGGameInfo } from 'common/types'
+import { LaunchOption } from 'common/types'
 
 export type GogInstallPlatform = 'windows' | 'osx' | 'linux'
 
@@ -8,31 +8,65 @@ export interface GogInstallInfo {
   manifest: GameManifest
 }
 
+export interface GOGSessionSyncQueueItem {
+  appName: string
+  session_date: number
+  time: number
+}
+
 interface GameInstallInfo {
   app_name: string
   launch_options: Array<LaunchOption>
   owned_dlc: Array<DLCInfo>
   title: string
   version: string
+  branches: Array<string | null>
   buildId: string
 }
 
-interface LaunchOption {
-  name: string
-  parameters: string
+type PerLanguageSize = {
+  '*': { download_size: number; disk_size: number }
+  [key: string]: { download_size: number; disk_size: number }
 }
 
-interface DLCInfo {
+// Raw output of gogdl info command
+export interface GOGDLInstallInfo {
+  size: PerLanguageSize
+  download_size?: number // only linux native
+  disk_size?: number
+  languages: Array<string>
+  dlcs: Array<{ title: string; id: string; size: PerLanguageSize }>
+  buildId: string
+  os: GogInstallPlatform
+  branch: string | null
+  dependencies: Array<string>
+  versionName: string
+  versionEtag: string
+  folder_name: string
+  available_branches: Array<string>
+  builds: {
+    items: Array<BuildItem>
+    total_count: number
+    count: number
+    has_private_branches: boolean
+  }
+}
+
+export interface DLCInfo {
   app_name: string
   title: string
+  perLangSize: PerLanguageSize
 }
 
 interface GameManifest {
   app_name: string
   disk_size: number
   download_size: number
+  perLangSize: PerLanguageSize
   languages: string[]
   versionEtag: string
+  dependencies: string[]
+  builds?: BuildItem[]
 }
 
 export interface GOGCloudSavesLocation {
@@ -59,7 +93,7 @@ export interface GOGGameDotInfoFile {
 }
 
 interface TaskBase {
-  name: string
+  name?: string
   isPrimary?: true
   isHidden?: true
   languages?: string[]
@@ -182,7 +216,7 @@ interface GamesDBDataBase {
   first_release_date: string
   title: LanguageMapper<string>
   sorting_title: LanguageMapper<string>
-  type: 'game'
+  type: 'game' | 'dlc' | 'spam'
   summary: LanguageMapper<string>
   videos: {
     provider: 'youtube'
@@ -230,10 +264,10 @@ interface GamesDBDataInner extends GamesDBDataBase {
   horizontal_artwork: {
     url_format: string
   }
-  background: {
+  background?: {
     url_format: string
   }
-  vertical_cover: {
+  vertical_cover?: {
     url_format: string
   }
   cover: {
@@ -242,7 +276,7 @@ interface GamesDBDataInner extends GamesDBDataBase {
   icon?: {
     url_format: string
   }
-  square_icon: {
+  square_icon?: {
     url_format: string
   }
   global_popularity_all_time: number
@@ -278,25 +312,221 @@ interface Release {
   release_per_platform_id: string
 }
 
-// Data returned from https://embed.gog.com/account/getFilteredProducts?mediaType=1&sortBy=title
+// Data returned from https://galaxy-library.gog.com/users/${credentials.user_id}/releases
 export interface Library {
-  sortBy: string
-  page: number
-  totalProducts: number
-  totalPages: number
-  productsPerPage: number
-  contentSystemCompatibility: null
-  moviesCount: number
-  tags: {
-    id: string
-    name: string
-    productCount: string
+  total_count: number
+  next_page_token?: string
+  page_token?: string
+  limit: number
+  items: Array<GalaxyLibraryEntry>
+}
+
+export interface GalaxyLibraryEntry {
+  platform_id: string
+  external_id: string
+  origin: string
+  owned: boolean
+  date_created: number
+  owned_since: number | null
+  certificate: string
+}
+
+// One item from https://content-system.gog.com/products/GAMEID/os/windows/builds?generation=2 endpoint
+export interface BuildItem {
+  build_id: string
+  product_id: string
+  os: 'windows' | 'osx' | 'linux' // Linux is not yet supported but it's good to have it here
+  branch: string | null
+  version_name: string
+  tags: string[]
+  public: boolean
+  date_published: string
+  generation: number
+  link?: string
+  // Visible only with _version=2 parameter
+  urls?: {
+    endpoint_name: string
+    url: string
+    url_format: string
+    parameters: string
+    fallback_only: boolean
+    max_fails: number
+    priority: number
   }[]
-  products: GOGGameInfo[]
-  updatedProductsCount: number
-  hiddenUpdatedProductsCount: number
-  appliedFilters: {
-    tags: null
+}
+
+interface ProductsEndpointFile {
+  id: string
+  size: number
+  downlink: string
+}
+
+interface ProductsEndpointBonusContent {
+  id: number
+  name: string
+  type: string
+  count: number
+  total_size: number
+  files: Array<ProductsEndpointFile>
+}
+
+interface ProductsEndpointInstaller {
+  id: string
+  name: string
+  os: 'windows' | 'osx' | 'linux'
+  language: string
+  language_full: string
+  version: string
+  total_size: number
+  files: Array<ProductsEndpointFile>
+}
+
+export interface ProductsEndpointData {
+  id: number
+  title: string
+  purchase_link: string
+  slug: string
+  content_system_compatibility: {
+    windows: boolean
+    osx: boolean
+    linux: boolean
   }
-  hasHiddenProducts: boolean
+  languages: { [key: string]: string }
+  links: {
+    purchase_link: string
+    product_card: string
+    support: string
+    forum: string
+  }
+  in_development: {
+    active: boolean
+    until: number | null
+  }
+  is_secret: boolean
+  is_installable: boolean
+  game_type: 'game' | 'dlc' | 'pack'
+  is_pre_order: boolean
+  release_date: string
+  images: {
+    background: string
+    logo: string
+    logo2x: string
+    icon: string
+    sidebarIcon: string
+    sidebarIcon2x: string
+    menuNotificationAv: string
+    menuNotificationAv2: string
+  }
+  dlcs: {
+    products: Array<{
+      id: number
+      link: string
+      expanded_link: string
+    }>
+    all_products_url: string
+    expanded_all_products_url: string
+  }
+  // Requires expanded description
+  description?: {
+    lead: string
+    full: string
+    whats_cool_about_it: string
+  }
+  // Requires downloads
+  downloads?: {
+    installers: Array<ProductsEndpointInstaller>
+    patches: Array<ProductsEndpointInstaller>
+    language_packs: Array<ProductsEndpointInstaller>
+    bonus_content: Array<ProductsEndpointBonusContent>
+  }
+  changelog?: string
+}
+
+// MANIFESTS
+
+export interface GOGv1Manifest {
+  version: 1
+  product: {
+    timestamp: number
+    depots: Array<
+      | {
+          languages: string[]
+          size: string
+          gameIDs: string[]
+          systems: string[]
+          manifest: string
+        }
+      | { redist: string; executable: string; argument: string; size: string }
+    >
+
+    support_commands: {
+      languages: string[]
+      executable: string
+      gameID: string
+      argument: string
+      systems: string[]
+    }[]
+    installDirectory: string
+    rootGameID: string
+    gameIDs: {
+      gameID: string
+      name: { [lang: string]: string }
+      dependencies: string[]
+      standalone: boolean
+    }[]
+    projectName: string
+  }
+}
+
+export interface GOGv2Manifest {
+  version: 2
+  baseProductId: string
+  buildId: string
+  clientId?: string
+  clientSecret?: string
+  dependencies?: string[]
+  depots: Array<{
+    compressedSize: number
+    languages: string[]
+    manifest: string
+    productId: string
+    size: number
+    isGogDepot?: boolean
+  }>
+  platform: GogInstallPlatform
+  installDirectory: string
+  products: Array<{
+    name: string
+    productId: string
+    temp_arguments: string
+    temp_executable: string
+  }>
+  tags?: string[]
+  scriptInterpreter?: boolean
+}
+
+export interface GOGRedistManifest {
+  depots: Array<{
+    compressedSize: number
+    dependencyId: string
+    executable: { arguments: string; path: string }
+    internal: boolean
+    readableName: string
+    manifest: string
+    signature: string
+    size: number
+  }>
+  build_id?: string
+  HGLInstalled?: string[]
+}
+
+export interface GOGCredentials {
+  access_token: string
+  expires_in: number
+  token_type: string
+  scope: string
+  session_id: string
+  refresh_token: string
+  user_id: string
+  loginType: number
 }

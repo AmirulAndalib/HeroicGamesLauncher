@@ -1,6 +1,11 @@
 {
     "button": {
-        "login": "Log in"
+        "copied": "Copied!",
+        "copy": "Copy",
+        "error": "Error, try a different Code",
+        "loading": "Loading",
+        "login": "Log in",
+        "open": "Open Link"
     },
     "message": {
         "part1": "In order to log in and install your games, you first need to follow the steps below:",
@@ -11,10 +16,6 @@
         "part6": "Paste your",
         "part7": "authorization code number",
         "part8": "in the input box below and click on the login button."
-    },
-    "status": {
-        "error": "Error",
-        "loading": "Loading Game list, please wait"
     },
     "welcome": "Welcome!"
 }
