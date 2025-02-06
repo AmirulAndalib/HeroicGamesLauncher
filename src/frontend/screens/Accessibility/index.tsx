@@ -15,6 +15,7 @@ import ToggleSwitch from 'frontend/components/UI/ToggleSwitch'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import './index.css'
+import { hasHelp } from 'frontend/hooks/hasHelp'
 
 export default React.memo(function Accessibility() {
   const { t } = useTranslation()
@@ -24,9 +25,19 @@ export default React.memo(function Accessibility() {
     setZoomPercent,
     allTilesInColor,
     setAllTilesInColor,
+    titlesAlwaysVisible,
+    setTitlesAlwaysVisible,
     setPrimaryFontFamily,
-    setSecondaryFontFamily
+    setSecondaryFontFamily,
+    disableDialogBackdropClose,
+    setDisableDialogBackdropClose
   } = useContext(ContextProvider)
+
+  hasHelp(
+    'accessibility',
+    t('help.title.accessibility', 'Accessibility'),
+    <p>{t('help.content.accessibility', 'Shows accessibility settings.')}</p>
+  )
 
   const [fonts, setFonts] = useState<string[]>([])
   const [refreshing, setRefreshing] = useState(false)
@@ -152,14 +163,11 @@ export default React.memo(function Accessibility() {
           htmlId="content-font-family"
           value={contentFont}
           onChange={handleContentFontFamily}
-          label={
-            t(
-              'accessibility.content_font_family_no_default',
-              'Content Font Family (Default: '
-            ) +
-            defaultSecondaryFont.split(',')[0].trim() +
-            ')'
-          }
+          label={t(
+            'accessibility.content_font_family_default',
+            'Content Font Family (Default: {{fontFamily}})',
+            { fontFamily: defaultSecondaryFont.split(',')[0].trim() }
+          )}
         >
           {options}
         </SelectField>
@@ -168,19 +176,17 @@ export default React.memo(function Accessibility() {
           htmlId="actions-font-family"
           value={actionFont}
           onChange={handleActionsFontFamily}
-          label={
-            t(
-              'accessibility.actions_font_family_no_default',
-              'Actions Font Family (Default: '
-            ) +
-            defaultPrimaryFont.split(',')[0].trim() +
-            ')'
-          }
+          label={t(
+            'accessibility.actions_font_family_default',
+            'Actions Font Family (Default: {{fontFamily}})',
+            { fontFamily: defaultPrimaryFont.split(',')[0].trim() }
+          )}
         >
           {options}
         </SelectField>
 
         <ThemeSelector />
+
         <span className="setting">
           <label className={classNames('toggleWrapper', { isRTL: isRTL })}>
             <ToggleSwitch
@@ -192,6 +198,38 @@ export default React.memo(function Accessibility() {
               title={t(
                 'accessibility.all_tiles_in_color',
                 'Show all game tiles in color'
+              )}
+            />
+          </label>
+        </span>
+
+        <span className="setting">
+          <label className={classNames('toggleWrapper', { isRTL: isRTL })}>
+            <ToggleSwitch
+              htmlId="setTitlesAlwaysVisible"
+              value={titlesAlwaysVisible}
+              handleChange={() => {
+                setTitlesAlwaysVisible(!titlesAlwaysVisible)
+              }}
+              title={t(
+                'accessibility.titles_always_visible',
+                'Always show titles in library'
+              )}
+            />
+          </label>
+        </span>
+
+        <span className="setting">
+          <label className={classNames('toggleWrapper', { isRTL: isRTL })}>
+            <ToggleSwitch
+              htmlId="disableDialogBackdropClose"
+              value={disableDialogBackdropClose}
+              handleChange={() => {
+                setDisableDialogBackdropClose(!disableDialogBackdropClose)
+              }}
+              title={t(
+                'accessibility.disable_dialog_backdrop_close',
+                'Disable closing dialogs by clicking outside'
               )}
             />
           </label>

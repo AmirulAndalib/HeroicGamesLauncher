@@ -1,5 +1,4 @@
-import axios from 'axios'
-import { spawn } from 'child_process'
+import { axiosClient, extractFiles } from 'backend/utils'
 import { existsSync, mkdirSync, writeFile } from 'graceful-fs'
 
 interface GithubAssetMetadata {
@@ -31,7 +30,7 @@ async function getAssetDataFromDownload(
   }
 
   const [, , author, repo, , , tag, assetName] = splitUrl
-  const response = await axios
+  const response = await axiosClient
     .get(`https://api.github.com/repos/${author}/${repo}/releases/tags/${tag}`)
     .catch((error) => {
       throw new Error(`Failed to access GitHub API: ${error.toJSON()}`)
@@ -53,7 +52,7 @@ async function getAssetDataFromDownload(
 }
 
 async function downloadFile(url: string, filePath: string) {
-  const response = await axios
+  const response = await axiosClient
     .get(url, { responseType: 'arraybuffer' })
     .catch((error) => {
       throw new Error(`Failed to download ${url}: ${error.toJSON()}`)
@@ -75,7 +74,6 @@ async function downloadFile(url: string, filePath: string) {
 
 async function extractTarFile(
   filePath: string,
-  contentType: string,
   options?: { extractedPath?: string; strip?: number }
 ) {
   if (!existsSync(filePath)) {
@@ -89,26 +87,12 @@ async function extractTarFile(
     extractedPath = splitPath.join('.tar')
   }
   mkdirSync(extractedPath, { recursive: true })
-  let tarflags = ''
-  switch (contentType) {
-    case 'application/x-xz':
-      tarflags = '-Jxf'
-      break
-    default:
-      throw new Error('Unrecognized content_type: ' + contentType)
-  }
-
   const strip = options?.strip
-  return new Promise((res, rej) => {
-    const child = spawn('tar', [
-      '--directory',
-      extractedPath,
-      ...(strip ? ['--strip-components', `${strip}`] : []),
-      tarflags,
-      filePath
-    ])
-    child.on('close', res)
-    child.on('error', rej)
+
+  return extractFiles({
+    path: filePath,
+    destination: extractedPath,
+    strip: strip || 0
   })
 }
 

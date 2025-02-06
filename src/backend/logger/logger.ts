@@ -4,14 +4,25 @@
  *        Note that with console.log and console.warn everything will be saved too.
  *        error equals console.error
  */
-import { AppSettings, GameSettings } from 'common/types'
+import { AppSettings, GameInfo, GameSettings, Runner } from 'common/types'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
 import { appendMessageToLogFile, getLongestPrefix } from './logfile'
+import { backendEvents } from 'backend/backend_events'
+import { GlobalConfig } from 'backend/config'
+import { getGOGdlBin, getLegendaryBin } from 'backend/utils'
+import { dirname, join } from 'path'
+import { formatSystemInfo, getSystemInfo } from '../utils/systeminfo'
+import { appendFile, writeFile } from 'fs/promises'
+import { gamesConfigPath, isWindows } from 'backend/constants'
+import { gameManagerMap } from 'backend/storeManagers'
+import { existsSync, mkdirSync, openSync } from 'graceful-fs'
+import { Winetricks } from 'backend/tools'
 
 export enum LogPrefix {
   General = '',
   Legendary = 'Legendary',
   Gog = 'Gog',
+  Nile = 'Nile',
   WineDownloader = 'WineDownloader',
   DXVKInstaller = 'DXVKInstaller',
   GlobalConfig = 'GlobalConfig',
@@ -24,15 +35,97 @@ export enum LogPrefix {
   WineTricks = 'Winetricks',
   Connection = 'Connection',
   DownloadManager = 'DownloadManager',
-  ExtraGameInfo = 'ExtraGameInfo'
+  ExtraGameInfo = 'ExtraGameInfo',
+  Sideload = 'Sideload',
+  LogUploader = 'LogUploader'
 }
 
-type LogInputType = unknown[] | unknown
+export const RunnerToLogPrefixMap = {
+  legendary: LogPrefix.Legendary,
+  gog: LogPrefix.Gog,
+  sideload: LogPrefix.Sideload
+}
+
+type LogInputType = unknown
 
 interface LogOptions {
   prefix?: LogPrefix
   showDialog?: boolean
   skipLogToFile?: boolean
+  forceLog?: boolean
+}
+
+// global variable to use by logBase
+export let logsDisabled = false
+
+export function initLogger() {
+  // Add a basic error handler to our stdout/stderr. If we don't do this,
+  // the main `process.on('uncaughtException', ...)` handler catches them (and
+  // presents an error message to the user, which is hardly necessary for
+  // "just" failing to write to the streams)
+  for (const channel of ['stdout', 'stderr'] as const) {
+    process[channel].once('error', (error: Error) => {
+      const prefix = `${getTimeStamp()} ${getLogLevelString(
+        'ERROR'
+      )} ${getPrefixString(LogPrefix.Backend)}`
+      appendMessageToLogFile(
+        `${prefix} Error writing to ${channel}: ${error.stack}`
+      )
+      process[channel].on('error', () => {
+        // Silence further write errors
+      })
+    })
+  }
+
+  // check `disableLogs` setting
+  const { disableLogs } = GlobalConfig.get().getSettings()
+
+  logsDisabled = disableLogs
+
+  if (logsDisabled) {
+    logWarning(
+      'IMPORTANT: Logs are disabled. Enable logs before reporting any issue.',
+      {
+        forceLog: true
+      }
+    )
+  }
+
+  // log important information: binaries, system specs
+  getSystemInfo()
+    .then(formatSystemInfo)
+    .then((systemInfo) => {
+      logInfo(`\nSystem Information:\n${systemInfo}\n`, {
+        prefix: LogPrefix.Backend,
+        forceLog: true
+      })
+    })
+    .catch((error) =>
+      logError(['Failed to fetch system information', error], LogPrefix.Backend)
+    )
+
+  logInfo(['Legendary location:', join(...Object.values(getLegendaryBin()))], {
+    prefix: LogPrefix.Legendary,
+    forceLog: true
+  })
+  logInfo(['GOGDL location:', join(...Object.values(getGOGdlBin()))], {
+    prefix: LogPrefix.Gog,
+    forceLog: true
+  })
+
+  // listen to the settingChanged event, log change and enable/disable logging if needed
+  backendEvents.on('settingChanged', ({ key, oldValue, newValue }) => {
+    logInfo(
+      `Heroic: Setting ${key} to ${JSON.stringify(
+        newValue
+      )} (previous value: ${JSON.stringify(oldValue)})`,
+      { forceLog: true }
+    )
+
+    if (key === 'disableLogs') {
+      logsDisabled = newValue as boolean
+    }
+  })
 }
 
 // helper to convert LogInputType to string
@@ -110,6 +203,8 @@ function logBase(
   } else {
     options = options_or_prefix
   }
+
+  if (logsDisabled && !options?.forceLog) return
 
   const text = convertInputToString(input)
   const messagePrefix = `${getTimeStamp()} ${getLogLevelString(
@@ -254,4 +349,294 @@ export function logChangedSetting(
       LogPrefix.Backend
     )
   })
+}
+
+export function lastPlayLogFileLocation(appName: string) {
+  return join(gamesConfigPath, `${appName}-lastPlay.log`)
+}
+
+export function logFileLocation(appName: string) {
+  return join(gamesConfigPath, `${appName}.log`)
+}
+
+const logsWriters: Record<string, LogWriter> = {}
+
+// Base abstract class for all LogWriters
+class LogWriter {
+  queue: (string | Promise<string | string[]>)[]
+  initialized: boolean
+  filePath: string
+  timeoutId: NodeJS.Timeout | undefined
+  processing: boolean
+
+  constructor() {
+    this.initialized = false
+    this.queue = []
+    this.filePath = ''
+    this.processing = false
+
+    if (new.target === LogWriter) {
+      throw new Error('LogWriter is an abstract class')
+    }
+  }
+
+  /**
+   * Append a message to the queue
+   * @param message string or promise that returns a string or string[]
+   */
+  logMessage(message: string | Promise<string | string[]>) {
+    // push messages to append to the log
+    this.queue.push(message)
+
+    // if the logger is initialized and we don't have a timeout
+    // and we are not proccesing the previous batch, write a new batch
+    //
+    // otherwise it means there's a timeout already running that will
+    // write the elements in the queue in a second or that we are processing
+    // promises
+    if (this.initialized && !this.processing && !this.timeoutId)
+      this.appendMessages()
+  }
+
+  async appendMessages() {
+    const itemsInQueue = this.queue
+
+    // clear pending message if any
+    this.queue = []
+
+    // clear timeout if any
+    delete this.timeoutId
+
+    if (!itemsInQueue?.length) return
+
+    this.processing = true
+
+    // process items in queue, if they are promises we wait
+    // for them so we can write them in the right order
+    let messagesToWrite: string[] = []
+    for (const item of itemsInQueue) {
+      try {
+        let result = await item
+
+        // support promises returning a string or an array of strings
+        result = Array.isArray(result) ? result : [result]
+
+        messagesToWrite = messagesToWrite.concat(result)
+      } catch (error) {
+        logError(error, LogPrefix.Backend)
+      }
+    }
+
+    this.processing = false
+
+    // if we have messages, write them and check again in 1 second
+    // we start the timeout before writing so we don't wait until
+    // the disk write
+    this.timeoutId = setTimeout(async () => this.appendMessages(), 1000)
+
+    try {
+      await appendFile(this.filePath, messagesToWrite.join(''))
+    } catch (error) {
+      // ignore failures if messages could not be written
+    }
+  }
+
+  async initLog() {
+    if (this.filePath) {
+      try {
+        const dir = dirname(this.filePath)
+        if (dir && !existsSync(dir)) {
+          mkdirSync(dir)
+        }
+        openSync(this.filePath, 'w')
+        this.initialized = true
+      } catch (error) {
+        logError([`Open ${this.filePath} failed with`, error], {
+          prefix: LogPrefix?.Backend,
+          skipLogToFile: true
+        })
+      }
+    }
+  }
+}
+
+class GameLogWriter extends LogWriter {
+  gameInfo: GameInfo
+
+  constructor(gameInfo: GameInfo) {
+    super()
+    this.gameInfo = gameInfo
+    this.filePath = lastPlayLogFileLocation(gameInfo.app_name)
+  }
+
+  async initLog() {
+    const { app_name, runner } = this.gameInfo
+
+    const notNative =
+      ['windows', 'Windows', 'Win32'].includes(
+        this.gameInfo.install.platform || ''
+      ) && !isWindows
+
+    // init log file and then append message if any
+    try {
+      // log game title and install directory
+
+      const installPath =
+        this.gameInfo.runner === 'sideload'
+          ? this.gameInfo.folder_name
+          : this.gameInfo.install.install_path
+
+      await writeFile(
+        this.filePath,
+        `Launching "${this.gameInfo.title}" (${runner})\n` +
+          `Native? ${notNative ? 'No' : 'Yes'}\n` +
+          `Installed in: ${installPath}\n\n`
+      )
+
+      try {
+        // log system information
+        const info = await getSystemInfo()
+        const systemInfo = await formatSystemInfo(info)
+
+        await appendFile(this.filePath, `System Info:\n${systemInfo}\n\n`)
+      } catch (error) {
+        logError(
+          ['Failed to fetch system information', error],
+          LogPrefix.Backend
+        )
+      }
+
+      // log game settings
+      const gameSettings = await gameManagerMap[runner].getSettings(app_name)
+      const gameSettingsString = JSON.stringify(gameSettings, null, '\t')
+      const startPlayingDate = new Date()
+
+      await appendFile(
+        this.filePath,
+        `Game Settings: ${gameSettingsString}\n\n`
+      )
+
+      await appendFile(
+        this.filePath,
+        `Game launched at: ${startPlayingDate}\n\n`
+      )
+
+      this.initialized = true
+    } catch (error) {
+      logError(
+        [`Failed to initialize log ${this.filePath}:`, error],
+        LogPrefix.Backend
+      )
+    }
+  }
+}
+
+export function appendGamePlayLog(gameInfo: GameInfo, message: string) {
+  logsWriters[`${gameInfo.app_name}-lastPlay`]?.logMessage(message)
+}
+
+export async function initGamePlayLog(gameInfo: GameInfo) {
+  logsWriters[`${gameInfo.app_name}-lastPlay`] ??= new GameLogWriter(gameInfo)
+  return logsWriters[`${gameInfo.app_name}-lastPlay`].initLog()
+}
+
+export async function appendWinetricksGamePlayLog(gameInfo: GameInfo) {
+  const logWriter = logsWriters[`${gameInfo.app_name}-lastPlay`]
+  if (logWriter) {
+    // append a promise to the queue
+    logWriter.logMessage(
+      new Promise((resolve, reject) => {
+        Winetricks.listInstalled(gameInfo.runner, gameInfo.app_name)
+          .then((installedPackages) => {
+            const packagesString = installedPackages
+              ? installedPackages.join(', ')
+              : 'none'
+
+            resolve(`Winetricks packages: ${packagesString}\n\n`)
+          })
+          .catch((error) => {
+            reject(error)
+          })
+      })
+    )
+  }
+}
+
+export function stopLogger(appName: string) {
+  logsWriters[`${appName}-lastPlay`]?.logMessage(
+    '============= End of log ============='
+  )
+  delete logsWriters[`${appName}-lastPlay`]
+}
+
+// LogWriter subclass to log to latest runner logs
+class RunnerLogWriter extends LogWriter {
+  runner: Runner
+
+  constructor(runner: Runner, filePath: string) {
+    super()
+    this.filePath = filePath
+    this.runner = runner
+  }
+}
+
+export function appendRunnerLog(runner: Runner, message: string) {
+  logsWriters[runner]?.logMessage(message)
+}
+
+export async function initRunnerLog(runner: Runner, filePath: string) {
+  logsWriters[runner] ??= new RunnerLogWriter(runner, filePath)
+  return logsWriters[runner].initLog()
+}
+
+// LogWriter subclass to write general Heroic logs
+class HeroicLogWriter extends LogWriter {
+  constructor(filePath: string) {
+    super()
+    this.filePath = filePath
+  }
+}
+
+export function appendHeroicLog(message: string) {
+  logsWriters['heroic']?.logMessage(message)
+}
+
+export async function initHeroicLog(filePath: string) {
+  logsWriters['heroic'] ??= new HeroicLogWriter(filePath)
+  return logsWriters['heroic'].initLog()
+}
+
+// LogWriter subclass to log install/update for a given game
+class GameInstallLogWriter extends LogWriter {
+  constructor(appName: string) {
+    super()
+    this.filePath = logFileLocation(appName)
+  }
+}
+
+export function appendGameLog(appName: string, message: string) {
+  logsWriters[appName]?.logMessage(message)
+}
+
+export async function initGameLog(appName: string) {
+  logsWriters[appName] ??= new GameInstallLogWriter(appName)
+  return logsWriters[appName].initLog()
+}
+
+// LogWriter subclass to log to an explicit logFile
+// Useful to log anything that is not specific
+class FileLogWriter extends LogWriter {
+  constructor(filePath: string) {
+    super()
+    this.filePath = filePath
+  }
+}
+
+export function appendFileLog(filePath: string, message: string) {
+  logsWriters[filePath]?.logMessage(message)
+}
+
+export async function initFileLog(filePath: string) {
+  logsWriters[filePath] ??= new FileLogWriter(filePath)
+  return logsWriters[filePath].initLog()
 }

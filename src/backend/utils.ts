@@ -1,10 +1,4 @@
-import {
-  createAbortController,
-  deleteAbortController,
-  callAllAbortControllers
-} from './utils/aborthandler/aborthandler'
-import { GOGGame } from './gog/games'
-import { LegendaryGame } from './legendary/games'
+import { callAllAbortControllers } from './utils/aborthandler/aborthandler'
 import {
   Runner,
   WineInstallation,
@@ -13,9 +7,10 @@ import {
   Release,
   GameInfo,
   GameSettings,
-  SideloadGame
+  GameStatus
 } from 'common/types'
-import * as axios from 'axios'
+import axios from 'axios'
+import https from 'node:https'
 import { app, dialog, shell, Notification, BrowserWindow } from 'electron'
 import {
   exec,
@@ -24,45 +19,73 @@ import {
   SpawnOptions,
   spawnSync
 } from 'child_process'
-import { appendFileSync, existsSync, rmSync } from 'graceful-fs'
+import { existsSync, rmSync } from 'graceful-fs'
 import { promisify } from 'util'
 import i18next, { t } from 'i18next'
-import si from 'systeminformation'
 
 import {
   fixAsarPath,
   getSteamLibraries,
-  heroicConfigPath,
-  heroicGamesConfigPath,
+  configPath,
+  gamesConfigPath,
   icon,
   isWindows,
   publicDir,
   GITHUB_API,
   isMac,
-  configStore
+  configStore,
+  isLinux
 } from './constants'
-import { logError, logInfo, LogPrefix, logWarning } from './logger/logger'
+import {
+  appendGamePlayLog,
+  logError,
+  logInfo,
+  LogPrefix,
+  logsDisabled,
+  logWarning
+} from './logger/logger'
 import { basename, dirname, join, normalize } from 'path'
-import { runLegendaryCommand } from './legendary/library'
-import { runGogdlCommand } from './gog/library'
+import { runRunnerCommand as runLegendaryCommand } from 'backend/storeManagers/legendary/library'
 import {
   gameInfoStore,
   installStore,
   libraryStore
-} from './legendary/electronStores'
+} from 'backend/storeManagers/legendary/electronStores'
 import {
   apiInfoCache as GOGapiInfoCache,
-  gogInstallInfoStore as GOGinstallInfoStore,
+  installInfoStore as GOGinstallInfoStore,
   libraryStore as GOGlibraryStore
-} from './gog/electronStores'
-import fileSize from 'filesize'
+} from './storeManagers/gog/electronStores'
+import gogPresence from './storeManagers/gog/presence'
+import {
+  installStore as nileInstallStore,
+  libraryStore as nileLibraryStore
+} from './storeManagers/nile/electronStores'
+import * as fileSize from 'filesize'
 import makeClient from 'discord-rich-presence-typescript'
 import { notify, showDialogBoxModalAuto } from './dialog/dialog'
-import { getAppInfo } from './sideload/games'
 import { getMainWindow, sendFrontendMessage } from './main_window'
 import { GlobalConfig } from './config'
 import { GameConfig } from './game_config'
-import { validWine } from './launcher'
+import { validWine, runWineCommand } from './launcher'
+import { gameManagerMap } from 'backend/storeManagers'
+import {
+  installWineVersion,
+  updateWineVersionInfos,
+  wineDownloaderInfoStore
+} from './wine/manager/utils'
+import { readdir, lstat } from 'fs/promises'
+import { getHeroicVersion } from './utils/systeminfo/heroicVersion'
+import { backendEvents } from './backend_events'
+import { wikiGameInfoStore } from './wiki_game_info/electronStore'
+import EasyDl from 'easydl'
+
+import {
+  deviceNameCache,
+  vendorNameCache
+} from './utils/systeminfo/gpu/pci_ids'
+import type { WineManagerStatus } from 'common/types'
+import { isUmuSupported } from './utils/compatibility_layers'
 
 const execAsync = promisify(exec)
 
@@ -115,14 +138,16 @@ function semverGt(target: string, base: string) {
   return isGE
 }
 
-const getFileSize = fileSize.partial({ base: 2 })
+const getFileSize = fileSize.partial({ base: 2 }) as (arg: unknown) => string
 
-function getWineFromProton(
-  wineVersion: WineInstallation,
-  winePrefix: string
-): { winePrefix: string; wineBin: string } {
-  if (wineVersion.type !== 'proton') {
-    return { winePrefix, wineBin: wineVersion.bin }
+async function getWineFromProton(
+  gameSettings: GameSettings
+): Promise<{ winePrefix: string; wineVersion: WineInstallation }> {
+  const wineVersion = gameSettings.wineVersion
+  let winePrefix = gameSettings.winePrefix
+
+  if (wineVersion.type !== 'proton' || (await isUmuSupported(gameSettings))) {
+    return { winePrefix, wineVersion }
   }
 
   winePrefix = join(winePrefix, 'pfx')
@@ -131,8 +156,17 @@ function getWineFromProton(
   for (const distPath of ['dist', 'files']) {
     const protonBaseDir = dirname(wineVersion.bin)
     const wineBin = join(protonBaseDir, distPath, 'bin', 'wine')
-    if (existsSync(wineBin)) {
-      return { wineBin, winePrefix }
+    if (!existsSync(wineBin)) continue
+
+    const wineserverBin = join(protonBaseDir, distPath, 'bin', 'wineserver')
+    return {
+      winePrefix,
+      wineVersion: {
+        ...wineVersion,
+        type: 'wine',
+        bin: wineBin,
+        wineserver: existsSync(wineserverBin) ? wineserverBin : undefined
+      }
     }
   }
 
@@ -145,7 +179,7 @@ function getWineFromProton(
     LogPrefix.Backend
   )
 
-  return { wineBin: '', winePrefix }
+  return { wineVersion, winePrefix }
 }
 
 async function isEpicServiceOffline(
@@ -164,7 +198,7 @@ async function isEpicServiceOffline(
   })
 
   try {
-    const { data } = await axios.default.get(epicStatusApi)
+    const { data } = await axiosClient.get(epicStatusApi)
 
     for (const component of data.components) {
       const { name: name, status: indicator } = component
@@ -190,53 +224,6 @@ async function isEpicServiceOffline(
   }
 }
 
-const getLegendaryVersion = async () => {
-  const abortID = 'legendary-version'
-  const { stdout, error, abort } = await runLegendaryCommand(
-    ['--version'],
-    createAbortController(abortID)
-  )
-
-  deleteAbortController(abortID)
-
-  if (error || abort) {
-    return 'invalid'
-  }
-
-  return stdout
-    .split('legendary version')[1]
-    .replaceAll('"', '')
-    .replaceAll(', codename', '')
-    .replaceAll('\n', '')
-}
-
-const getGogdlVersion = async () => {
-  const abortID = 'gogdl-version'
-  const { stdout, error } = await runGogdlCommand(
-    ['--version'],
-    createAbortController(abortID)
-  )
-
-  deleteAbortController(abortID)
-
-  if (error) {
-    return 'invalid'
-  }
-
-  return stdout
-}
-
-const getHeroicVersion = () => {
-  const VERSION_NUMBER = app.getVersion()
-  const BETA_VERSION_NAME = 'Caesar Clown'
-  const STABLE_VERSION_NAME = 'Trafalgar Law'
-  const isBetaorAlpha =
-    VERSION_NUMBER.includes('alpha') || VERSION_NUMBER.includes('beta')
-  const VERSION_NAME = isBetaorAlpha ? BETA_VERSION_NAME : STABLE_VERSION_NAME
-
-  return `${VERSION_NUMBER} ${VERSION_NAME}`
-}
-
 const showAboutWindow = () => {
   app.setAboutPanelOptions({
     applicationName: 'Heroic Games Launcher',
@@ -249,8 +236,10 @@ const showAboutWindow = () => {
 }
 
 async function handleExit() {
-  const isLocked = existsSync(join(heroicGamesConfigPath, 'lock'))
+  const isLocked = existsSync(join(gamesConfigPath, 'lock'))
   const mainWindow = getMainWindow()
+
+  await gogPresence.deletePresence()
 
   if (isLocked && mainWindow) {
     const { response } = await showMessageBox(mainWindow, {
@@ -283,65 +272,6 @@ async function handleExit() {
   app.exit()
 }
 
-// This won't change while the app is running
-// Caching significantly increases performance when launching games
-let systemInfoCache = ''
-const getSystemInfo = async () => {
-  if (systemInfoCache !== '') {
-    return systemInfoCache
-  }
-  const heroicVersion = getHeroicVersion()
-  const legendaryVersion = await getLegendaryVersion()
-  const gogdlVersion = await getGogdlVersion()
-
-  const electronVersion = process.versions.electron || 'unknown'
-  const chromeVersion = process.versions.chrome || 'unknown'
-  const nodeVersion = process.versions.node || 'unknown'
-
-  // get CPU and RAM info
-  const { manufacturer, brand, speed, governor } = await si.cpu()
-  const { total, available } = await si.mem()
-
-  // get OS information
-  const { distro, kernel, arch, platform, release, codename } =
-    await si.osInfo()
-
-  // get GPU information
-  const { controllers } = await si.graphics()
-  const graphicsCards = String(
-    controllers.map(
-      ({ name, model, vram, driverVersion }, i) =>
-        `GPU${i}: ${name ? name : model} ${vram ? `VRAM: ${vram}MB` : ''} ${
-          driverVersion ? `DRIVER: ${driverVersion}` : ''
-        } \n`
-    )
-  )
-    .replaceAll(',', '')
-    .replaceAll('\n', '')
-
-  const isLinux = platform === 'linux'
-  const xEnv = isLinux
-    ? (await execAsync('echo $XDG_SESSION_TYPE')).stdout.replaceAll('\n', '')
-    : ''
-
-  systemInfoCache = `Heroic Version: ${heroicVersion}
-Legendary Version: ${legendaryVersion}
-GOGdl Version: ${gogdlVersion}
-
-Electron Version: ${electronVersion}
-Chrome Version: ${chromeVersion}
-NodeJS Version: ${nodeVersion}
-
-OS: ${isMac ? `${codename} ${release}` : distro} KERNEL: ${kernel} ARCH: ${arch}
-CPU: ${manufacturer} ${brand} @${speed} ${
-    governor ? `GOVERNOR: ${governor}` : ''
-  }
-RAM: Total: ${getFileSize(total)} Available: ${getFileSize(available)}
-GRAPHICS: ${graphicsCards}
-${isLinux ? `PROTOCOL: ${xEnv}` : ''}`
-  return systemInfoCache
-}
-
 type ErrorHandlerMessage = {
   error?: string
   logPath?: string
@@ -358,7 +288,10 @@ async function errorHandler({
   const noSpaceMsg = 'Not enough available disk space'
   const plat = r === 'legendary' ? 'Legendary (Epic Games)' : r
   const deletedFolderMsg = 'appears to be deleted'
-  const otherErrorMessages = ['No saved credentials', 'No credentials']
+  const expiredCredentials = 'No saved credentials'
+  const legendaryRegex = /legendary.*\.py/
+  // this message appears on macOS when no Crossover was found in the system but its a false alarm
+  const ignoreCrossoverMessage = 'IndexError: list index out of range'
 
   if (logPath) {
     execAsync(`tail "${logPath}" | grep 'disk space'`)
@@ -381,10 +314,12 @@ async function errorHandler({
       })
   }
   if (error) {
+    if (error.includes(ignoreCrossoverMessage)) {
+      return
+    }
     if (error.includes(deletedFolderMsg) && appName) {
       const runner = r.toLocaleLowerCase() as Runner
-      const game = getGame(appName, runner)
-      const { title } = game.getGameInfo()
+      const { title } = gameManagerMap[runner].getGameInfo(appName)
       const { response } = await showMessageBox({
         type: 'question',
         title,
@@ -396,27 +331,47 @@ async function errorHandler({
       })
 
       if (response === 1) {
-        return game.forceUninstall()
+        return gameManagerMap[runner].forceUninstall(appName)
       }
     }
 
-    otherErrorMessages.forEach(async (message) => {
-      if (error.includes(message)) {
-        return showDialogBoxModalAuto({
-          title: plat,
-          message: i18next.t(
-            'box.error.credentials.message',
-            'Your Crendentials have expired, Logout and Login Again!'
-          ),
-          type: 'ERROR'
-        })
+    if (legendaryRegex.test(error)) {
+      const MemoryError = 'MemoryError: '
+      if (error.includes(MemoryError)) {
+        return
       }
-    })
+
+      return showDialogBoxModalAuto({
+        title: plat,
+        message: i18next.t(
+          'box.error.legendary.generic',
+          'An error has occurred! Try to Logout and Login on your Epic account. {{newline}}  {{error}}',
+          { error, newline: '\n' }
+        ),
+        type: 'ERROR'
+      })
+    }
+
+    if (error.includes(expiredCredentials)) {
+      return showDialogBoxModalAuto({
+        title: plat,
+        message: i18next.t(
+          'box.error.credentials.message',
+          'Your Crendentials have expired, Logout and Login Again!'
+        ),
+        type: 'ERROR'
+      })
+    }
   }
 }
 
+// If you ever modify this range of characters, please also add them to nile
+// source as this function is used to determine how game directory will be named
 function removeSpecialcharacters(text: string): string {
-  const regexp = new RegExp(/[:|/|*|?|<|>|\\|&|{|}|%|$|@|`|!|™|+|'|"|®]/, 'gi')
+  const regexp = new RegExp(
+    /[:|/|*|?|<|>|\\|&|{|}|%|$|@|`|!|™|+|'|"|®]/,
+    'gi'
+  )
   return text.replaceAll(regexp, '')
 }
 
@@ -427,23 +382,39 @@ async function openUrlOrFile(url: string): Promise<string | void> {
   return shell.openPath(url)
 }
 
-async function clearCache() {
-  GOGapiInfoCache.clear()
-  GOGlibraryStore.clear()
-  GOGinstallInfoStore.clear()
-  installStore.clear()
-  libraryStore.clear()
-  gameInfoStore.clear()
+function clearCache(
+  library?: 'gog' | 'legendary' | 'nile',
+  fromVersionChange = false
+) {
+  wikiGameInfoStore.clear()
+  if (library === 'gog' || !library) {
+    GOGapiInfoCache.clear()
+    GOGlibraryStore.clear()
+    GOGinstallInfoStore.clear()
+  }
+  if (library === 'legendary' || !library) {
+    installStore.clear()
+    libraryStore.clear()
+    gameInfoStore.clear()
+    runLegendaryCommand(
+      { subcommand: 'cleanup' },
+      { abortId: 'legandary-cleanup' }
+    )
+  }
+  if (library === 'nile' || !library) {
+    nileInstallStore.clear()
+    nileLibraryStore.clear()
+  }
 
-  const abortID = 'legendary-cleanup'
-  runLegendaryCommand(['cleanup'], createAbortController(abortID)).then(() =>
-    deleteAbortController(abortID)
-  )
+  if (!fromVersionChange) {
+    deviceNameCache.clear()
+    vendorNameCache.clear()
+  }
 }
 
 function resetHeroic() {
-  const heroicFolders = [heroicGamesConfigPath, heroicConfigPath]
-  heroicFolders.forEach((folder) => {
+  const appFolders = [gamesConfigPath, configPath]
+  appFolders.forEach((folder) => {
     rmSync(folder, { recursive: true, force: true })
   })
   // wait a sec to avoid racing conditions
@@ -468,36 +439,75 @@ function showItemInFolder(item: string) {
 
 function splitPathAndName(fullPath: string): { dir: string; bin: string } {
   const dir = dirname(fullPath)
-  let bin = basename(fullPath)
-  // On Windows, you can just launch executables that are in the current working directory
-  // On Linux, you have to add a ./
-  if (!isWindows) {
-    bin = './' + bin
-  }
+  const bin = basename(fullPath)
   // Make sure to always return this as `dir, bin` to not break path
   // resolution when using `join(...Object.values(...))`
   return { dir, bin }
 }
 
+function archSpecificBinary(binaryName: string) {
+  // Try to use the arch-native binary first, if that doesn't exist fall back to
+  // the x64 version (assume a compatibility layer like box64 is installed)
+  const archSpecificPath = join(
+    publicDir,
+    'bin',
+    process.arch,
+    process.platform,
+    binaryName
+  )
+  if (existsSync(archSpecificPath)) return archSpecificPath
+  return join(publicDir, 'bin', 'x64', process.platform, binaryName)
+}
+
+let defaultLegendaryPath: string | undefined = undefined
 function getLegendaryBin(): { dir: string; bin: string } {
   const settings = GlobalConfig.get().getSettings()
   if (settings?.altLegendaryBin) {
     return splitPathAndName(settings.altLegendaryBin)
   }
-  return splitPathAndName(
-    fixAsarPath(join(publicDir, 'bin', process.platform, 'legendary'))
-  )
+
+  if (!defaultLegendaryPath)
+    defaultLegendaryPath = archSpecificBinary('legendary')
+
+  return splitPathAndName(fixAsarPath(defaultLegendaryPath))
 }
 
+let defaultGogdlPath: string | undefined = undefined
 function getGOGdlBin(): { dir: string; bin: string } {
   const settings = GlobalConfig.get().getSettings()
   if (settings?.altGogdlBin) {
     return splitPathAndName(settings.altGogdlBin)
   }
-  return splitPathAndName(
-    fixAsarPath(join(publicDir, 'bin', process.platform, 'gogdl'))
-  )
+
+  if (!defaultGogdlPath) defaultGogdlPath = archSpecificBinary('gogdl')
+
+  return splitPathAndName(fixAsarPath(defaultGogdlPath))
 }
+
+let defaultCometPath: string | undefined = undefined
+function getCometBin(): { dir: string; bin: string } {
+  const settings = GlobalConfig.get().getSettings()
+  if (settings?.altCometBin) {
+    return splitPathAndName(settings.altCometBin)
+  }
+
+  if (!defaultCometPath) defaultCometPath = archSpecificBinary('comet')
+
+  return splitPathAndName(fixAsarPath(defaultCometPath))
+}
+
+let defaultNilePath: string | undefined = undefined
+function getNileBin(): { dir: string; bin: string } {
+  const settings = GlobalConfig.get().getSettings()
+  if (settings?.altNileBin) {
+    return splitPathAndName(settings.altNileBin)
+  }
+
+  if (!defaultNilePath) defaultNilePath = archSpecificBinary('nile')
+
+  return splitPathAndName(fixAsarPath(defaultNilePath))
+}
+
 function getFormattedOsName(): string {
   switch (process.platform) {
     case 'linux':
@@ -511,41 +521,18 @@ function getFormattedOsName(): string {
   }
 }
 
-/**
- * Finds an executable on %PATH%/$PATH
- * @param executable The executable to find
- * @returns The full path to the executable, or nothing if it was not found
- */
-// This name could use some work
-async function searchForExecutableOnPath(executable: string): Promise<string> {
-  if (isWindows) {
-    // Todo: Respect %PATHEXT% here
-    const paths = process.env.PATH?.split(';') || []
-    for (const path of paths) {
-      const fullPath = join(path, executable)
-      if (existsSync(fullPath)) {
-        return fullPath
-      }
-    }
-    return ''
-  } else {
-    return execAsync(`which ${executable}`)
-      .then(({ stdout }) => {
-        return stdout.split('\n')[0]
-      })
-      .catch((error) => {
-        logError(error, LogPrefix.Backend)
-        return ''
-      })
-  }
-}
 async function getSteamRuntime(
-  requestedType: 'scout' | 'soldier'
+  requestedType: SteamRuntime['type']
 ): Promise<SteamRuntime> {
   const steamLibraries = await getSteamLibraries()
   const runtimeTypes: SteamRuntime[] = [
     {
-      path: 'steamapps/common/SteamLinuxRuntime_soldier/run',
+      path: 'steamapps/common/SteamLinuxRuntime_sniper/_v2-entry-point',
+      type: 'sniper',
+      args: ['--']
+    },
+    {
+      path: 'steamapps/common/SteamLinuxRuntime_soldier/_v2-entry-point',
       type: 'soldier',
       args: ['--']
     },
@@ -583,16 +570,34 @@ async function getSteamRuntime(
   return allAvailableRuntimes.pop()!
 }
 
-function constructAndUpdateRPC(gameName: string): RpcClient {
+function constructAndUpdateRPC(gameInfo: GameInfo): RpcClient {
   const client = makeClient('852942976564723722')
+  const versionText = `Heroic ${app.getVersion()}`
+
+  const image = gameInfo.art_icon || gameInfo.art_square
+  const title = gameInfo.title
+
+  const overrides = image.startsWith('http')
+    ? {
+        largeImageKey: image,
+        smallImageKey: 'icon_new',
+        largeImageText: title,
+        smallImageText: versionText
+      }
+    : {
+        largeImageKey: 'icon_new',
+        largeImageText: versionText
+      }
+
   client.updatePresence({
-    details: gameName,
+    details: title,
     instance: true,
-    largeImageKey: 'icon',
-    large_text: gameName,
+    large_text: title,
     startTimestamp: Date.now(),
-    state: 'via Heroic on ' + getFormattedOsName()
+    state: 'via Heroic on ' + getFormattedOsName(),
+    ...overrides
   })
+  logInfo('Started Discord Rich Presence', LogPrefix.Backend)
   return client
 }
 
@@ -735,33 +740,14 @@ function detectVCRedist(mainWindow: BrowserWindow) {
   })
 }
 
-function getGame(appName: string, runner: Runner) {
-  switch (runner) {
-    case 'legendary':
-      return LegendaryGame.get(appName)
-    default:
-      return GOGGame.get(appName)
-  }
-}
-
-function getFirstExistingParentPath(directoryPath: string): string {
-  let parentDirectoryPath = directoryPath
-  let parentDirectoryFound = existsSync(parentDirectoryPath)
-
-  while (!parentDirectoryFound) {
-    parentDirectoryPath = normalize(parentDirectoryPath + '/..')
-    parentDirectoryFound = existsSync(parentDirectoryPath)
-  }
-
-  return parentDirectoryPath !== '.' ? parentDirectoryPath : ''
-}
-
 const getLatestReleases = async (): Promise<Release[]> => {
+  if (process.env.CI === 'e2e') return []
+
   const newReleases: Release[] = []
   logInfo('Checking for new Heroic Updates', LogPrefix.Backend)
 
   try {
-    const { data: releases } = await axios.default.get(GITHUB_API)
+    const { data: releases } = await axiosClient.get(GITHUB_API)
     const latestStable: Release = releases.filter(
       (rel: Release) => rel.prerelease === false
     )[0]
@@ -802,12 +788,14 @@ const getLatestReleases = async (): Promise<Release[]> => {
 }
 
 const getCurrentChangelog = async (): Promise<Release | null> => {
+  if (process.env.CI === 'e2e') return null
+
   logInfo('Checking for current version changelog', LogPrefix.Backend)
 
   try {
     const current = app.getVersion()
 
-    const { data: release } = await axios.default.get(
+    const { data: release } = await axiosClient.get(
       `${GITHUB_API}/tags/v${current}`
     )
 
@@ -821,12 +809,8 @@ const getCurrentChangelog = async (): Promise<Release | null> => {
   }
 }
 
-function getInfo(appName: string, runner: Runner): GameInfo | SideloadGame {
-  if (runner === 'sideload') {
-    return getAppInfo(appName)
-  }
-  const game = getGame(appName, runner)
-  return game.getGameInfo()
+function getInfo(appName: string, runner: Runner): GameInfo {
+  return gameManagerMap[runner].getGameInfo(appName)
 }
 
 // can be removed if legendary and gogdl handle SIGTERM and SIGKILL
@@ -845,11 +829,23 @@ function killPattern(pattern: string) {
   return ret
 }
 
-const getShellPath = async (path: string): Promise<string> =>
-  normalize((await execAsync(`echo "${path}"`)).stdout.trim())
+async function shutdownWine(gameSettings: GameSettings) {
+  if (gameSettings.wineVersion.wineserver) {
+    spawnSync(gameSettings.wineVersion.wineserver, ['-k'], {
+      env: { WINEPREFIX: gameSettings.winePrefix }
+    })
+  } else {
+    await runWineCommand({
+      gameSettings,
+      commandParts: ['wineboot', '-k'],
+      wait: true,
+      protonVerb: 'run'
+    })
+  }
+}
 
-export const wait = async (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+const getShellPath = async (path: string): Promise<string> =>
+  normalize((await execAsync(`echo ${path}`)).stdout.trim())
 
 export const spawnAsync = async (
   command: string,
@@ -858,8 +854,8 @@ export const spawnAsync = async (
   onOutput?: (data: string) => void
 ): Promise<{ code: number | null; stdout: string; stderr: string }> => {
   const child = spawn(command, args, options)
-  const stdout: string[] = []
-  const stderr: string[] = []
+  const stdout = memoryLog()
+  const stderr = memoryLog()
 
   if (child.stdout) {
     child.stdout.on('data', (data) => {
@@ -916,25 +912,71 @@ async function ContinueWithFoundWine(
   return { response }
 }
 
+export async function downloadDefaultWine() {
+  // refresh wine list
+  await updateWineVersionInfos(true)
+  // get list of wines on wineDownloaderInfoStore
+  const availableWine = wineDownloaderInfoStore.get('wine-releases', [])
+  // use GE-Proton type if on Linux and GamePortingToolkit if on Mac
+  const release = availableWine.find((version) => {
+    if (isLinux) {
+      return version.type === 'GE-Proton'
+    } else if (isMac) {
+      return version.type === 'Game-Porting-Toolkit'
+    }
+    return false
+  })
+
+  if (!release) {
+    logError('Could not find default wine version', LogPrefix.Backend)
+    return null
+  }
+
+  // download the latest version
+  const onProgress = (state: WineManagerStatus) => {
+    sendFrontendMessage('progressOfWineManager', release.version, state)
+  }
+  const result = await installWineVersion(release, onProgress)
+
+  if (result === 'success') {
+    let downloadedWine = null
+    try {
+      const wineList = await GlobalConfig.get().getAlternativeWine()
+      // update the game config to use that wine
+      downloadedWine = wineList[0]
+      logInfo(`Changing wine version to ${downloadedWine.name}`)
+      GlobalConfig.get().setSetting('wineVersion', downloadedWine)
+    } catch (error) {
+      logError(
+        ['Error when changing wine version to default', error],
+        LogPrefix.Backend
+      )
+    }
+    return downloadedWine
+  }
+  return null
+}
+
 export async function checkWineBeforeLaunch(
-  appName: string,
-  gameSettings: GameSettings,
-  logFileLocation: string
+  gameInfo: GameInfo,
+  gameSettings: GameSettings
 ): Promise<boolean> {
   const wineIsValid = await validWine(gameSettings.wineVersion)
 
   if (wineIsValid) {
     return true
   } else {
-    logError(
-      `Wine version ${gameSettings.wineVersion.name} is not valid, trying another one.`,
-      LogPrefix.Backend
-    )
+    if (!logsDisabled) {
+      logError(
+        `Wine version ${gameSettings.wineVersion.name} is not valid, trying another one.`,
+        LogPrefix.Backend
+      )
 
-    appendFileSync(
-      logFileLocation,
-      `Wine version ${gameSettings.wineVersion.name} is not valid, trying another one.`
-    )
+      appendGamePlayLog(
+        gameInfo,
+        `Wine version ${gameSettings.wineVersion.name} is not valid, trying another one.\n`
+      )
+    }
 
     // check if the default wine is valid now
     const { wineVersion: defaultwine } = GlobalConfig.get().getSettings()
@@ -947,8 +989,12 @@ export async function checkWineBeforeLaunch(
 
       if (response === 0) {
         logInfo(`Changing wine version to ${defaultwine.name}`)
+        appendGamePlayLog(
+          gameInfo,
+          `Changing wine version to ${defaultwine.name}\n`
+        )
         gameSettings.wineVersion = defaultwine
-        GameConfig.get(appName).setSetting('wineVersion', defaultwine)
+        GameConfig.get(gameInfo.app_name).setSetting('wineVersion', defaultwine)
         return true
       } else {
         logInfo('User canceled the launch', LogPrefix.Backend)
@@ -959,6 +1005,20 @@ export async function checkWineBeforeLaunch(
       const firstFoundWine = wineList[0]
 
       const isValidWine = await validWine(firstFoundWine)
+
+      if (!wineList.length || !firstFoundWine || !isValidWine) {
+        const firstFoundWine = await downloadDefaultWine()
+        if (firstFoundWine) {
+          logInfo(`Changing wine version to ${firstFoundWine.name}`)
+          gameSettings.wineVersion = firstFoundWine
+          GameConfig.get(gameInfo.app_name).setSetting(
+            'wineVersion',
+            firstFoundWine
+          )
+          return true
+        }
+      }
+
       if (firstFoundWine && isValidWine) {
         const { response } = await ContinueWithFoundWine(
           gameSettings.wineVersion.name,
@@ -968,7 +1028,10 @@ export async function checkWineBeforeLaunch(
         if (response === 0) {
           logInfo(`Changing wine version to ${firstFoundWine.name}`)
           gameSettings.wineVersion = firstFoundWine
-          GameConfig.get(appName).setSetting('wineVersion', firstFoundWine)
+          GameConfig.get(gameInfo.app_name).setSetting(
+            'wineVersion',
+            firstFoundWine
+          )
           return true
         } else {
           logInfo('User canceled the launch', LogPrefix.Backend)
@@ -998,41 +1061,33 @@ export async function moveOnWindows(
   newInstallPath = join(newInstallPath, basename(install_path))
 
   let currentFile = ''
-  let currentPercent = ''
 
   // move using robocopy and show progress of the current file being copied
   const { code, stderr } = await spawnAsync(
     'robocopy',
-    [install_path, newInstallPath, '/MOVE', '/MIR'],
+    [install_path, newInstallPath, '/MOVE', '/MIR', '/NJH', '/NJS', '/NDL'],
     { stdio: 'pipe' },
     (data) => {
-      data = data.replaceAll(/\s/g, ' ')
+      let percent = 0
+      const percentMatch = data.match(/(\d+)(?:\.\d+)?%/)?.[1]
+      if (percentMatch) percent = Number(percentMatch)
 
-      const match = data.split(' ').filter(Boolean)
-      // current percentage
-      const percent = match.filter((m) => m.includes('%'))[0]
-      // current file
-      const file = match[match.length - 1]
-      if (percent) {
-        currentPercent = percent
-      }
+      const filenameMatch = data.match(/([\w.:\\]+)$/)?.[1]
+      if (filenameMatch) currentFile = filenameMatch
 
-      if (file && file.includes('.') && !file.includes('%')) {
-        currentPercent = '0%'
-        currentFile = file
-      }
-
-      if (match) {
-        sendFrontendMessage(`progressUpdate-${gameInfo.app_name}`, {
-          appName: gameInfo.app_name,
-          runner: gameInfo.runner,
-          status: 'moving',
-          progress: {
-            percent: currentPercent,
-            file: currentFile
-          }
-        })
-      }
+      sendFrontendMessage(`progressUpdate-${gameInfo.app_name}`, {
+        appName: gameInfo.app_name,
+        runner: gameInfo.runner,
+        status: 'moving',
+        progress: {
+          percent,
+          file: currentFile,
+          // FIXME: Robocopy does not report bytes moved / an ETA, so we have to
+          //        leave these blank for now
+          bytes: '',
+          eta: ''
+        }
+      })
     }
   )
   if (code !== 0) {
@@ -1060,7 +1115,6 @@ export async function moveOnUnix(
   const destination = join(newInstallPath, basename(install_path))
 
   let currentFile = ''
-  let currentPercent = ''
 
   let rsyncExists = false
   try {
@@ -1072,38 +1126,72 @@ export async function moveOnUnix(
   if (rsyncExists) {
     const origin = install_path + '/'
     logInfo(
-      `moving command: rsync -az --progress ${origin} ${destination} `,
+      `moving command: rsync --archive --compress --no-human-readable --remove-source-files --info=name,progress ${origin} ${destination} `,
       LogPrefix.Backend
     )
     const { code, stderr } = await spawnAsync(
       'rsync',
-      ['-az', '--progress', origin, destination],
+      [
+        '--archive',
+        '--compress',
+        '--no-human-readable',
+        '--remove-source-files',
+        '--info=name,progress',
+        origin,
+        destination
+      ],
       { stdio: 'pipe' },
       (data) => {
-        const split =
-          data
-            .split('\n')
-            .find((d) => d.includes('/') && !d.includes('%'))
-            ?.split('/') || []
-        const file = split.at(-1) || ''
+        let percent = 0
+        let eta = ''
+        let bytes = '0'
 
-        if (file) {
-          currentFile = file
+        // Multiple output lines might be buffered into a single `data`, so
+        // we have to iterate over every line (we can't just look at the last
+        // one since that might skip new files)
+        for (const outLine of data.trim().split('\n')) {
+          // Rsync outputs either the file currently being transferred or a
+          // progress report. To know which one of those `outLine` is, we check
+          // if it includes a %, :, and starts with a space
+          // If all of these aren't the case, it's *most likely* a filename
+          // FIXME: This is pretty hacky, but I don't see an obvious way to
+          //        "divide" the two output types other than that
+          const isFilenameOutput =
+            !outLine.includes('%') &&
+            !outLine.includes(':') &&
+            !outLine.startsWith(' ')
+
+          if (isFilenameOutput) {
+            // If we have a filename output, set `lastFile` and reset all
+            // other metrics. Either there'll be a progress update in the next
+            // line of `data`, or we've just started copying and thus start at 0
+            currentFile = outLine
+            percent = 0
+            eta = ''
+            bytes = '0'
+          } else {
+            // If we got the progress update, try to read out the bytes, ETA and
+            // percent
+            const bytesMatch = outLine.match(/^\s+(\d+)/)?.[1]
+            const etaMatch = outLine.match(/(\d+:\d{2}:\d{2})/)?.[1]
+            const percentMatch = outLine.match(/(\d+)%/)?.[1]
+            if (bytesMatch) bytes = getFileSize(Number(bytesMatch))
+            if (etaMatch) eta = etaMatch
+            if (percentMatch) percent = Number(percentMatch)
+          }
         }
 
-        const percent = data.match(/(\d+)%/)
-        if (percent) {
-          currentPercent = percent[0]
-          sendFrontendMessage(`progressUpdate-${gameInfo.app_name}`, {
-            appName: gameInfo.app_name,
-            runner: gameInfo.runner,
-            status: 'moving',
-            progress: {
-              percent: currentPercent,
-              file: currentFile
-            }
-          })
-        }
+        sendFrontendMessage(`progressUpdate-${gameInfo.app_name}`, {
+          appName: gameInfo.app_name,
+          runner: gameInfo.runner,
+          status: 'moving',
+          progress: {
+            percent,
+            eta,
+            bytes,
+            file: currentFile
+          }
+        })
       }
     )
     if (code !== 1) {
@@ -1130,6 +1218,303 @@ export async function moveOnUnix(
   return { status: 'done', installPath: destination }
 }
 
+// helper object for an array with a length limit
+// this is used when calling system processes to not store the complete output in memory
+//
+// the `limit` is the number of messages, it doesn't mean it will be exactly `limit` lines since a message can be multi-line
+const memoryLog = (limit = 50) => {
+  const lines: string[] = []
+
+  return {
+    push: (newLine: string) => {
+      lines.unshift(newLine)
+      if (lines.length > limit) {
+        lines.length = limit
+      }
+    },
+    join: (separator = '') => {
+      return lines.reverse().join(separator)
+    }
+  }
+}
+
+function removeFolder(path: string, folderName: string) {
+  if (path === 'default') {
+    const { defaultInstallPath } = GlobalConfig.get().getSettings()
+    const path = defaultInstallPath.replaceAll("'", '')
+    const folderToDelete = `${path}/${folderName}`
+    if (existsSync(folderToDelete)) {
+      return setTimeout(() => {
+        rmSync(folderToDelete, { recursive: true })
+      }, 5000)
+    }
+    return
+  }
+
+  const folderToDelete = `${path}/${folderName}`.replaceAll("'", '')
+  if (existsSync(folderToDelete)) {
+    return setTimeout(() => {
+      rmSync(folderToDelete, { recursive: true })
+    }, 2000)
+  }
+  return
+}
+
+async function getPathDiskSize(path: string): Promise<number> {
+  const statData = await lstat(path)
+  let size = 0
+  if (statData.isSymbolicLink()) {
+    return 0
+  }
+  if (statData.isDirectory()) {
+    const contents = await readdir(path)
+
+    for (const item of contents) {
+      const itemPath = join(path, item)
+      size += await getPathDiskSize(itemPath)
+    }
+    return size
+  }
+
+  return statData.size
+}
+
+function sendGameStatusUpdate(payload: GameStatus) {
+  sendFrontendMessage('gameStatusUpdate', payload)
+  backendEvents.emit('gameStatusUpdate', payload)
+}
+
+function sendProgressUpdate(payload: GameStatus) {
+  sendFrontendMessage(`progressUpdate-${payload.appName}`, payload)
+  backendEvents.emit(`progressUpdate-${payload.appName}`, payload)
+}
+
+interface ProgressCallback {
+  (
+    downloadedBytes: number,
+    downloadSpeed: number,
+    diskWriteSpeed: number,
+    progress: number
+  ): void
+}
+
+interface DownloadArgs {
+  url: string
+  dest: string
+  abortSignal?: AbortSignal
+  progressCallback?: ProgressCallback
+  ignoreFailure?: boolean
+}
+
+/**
+ * Downloads a file from a given URL to a specified destination path.
+ * @param {string} url - The URL of the file to download.
+ * @param {string} dest - The destination path to save the downloaded file.
+ * @param {AbortSignal} abortSignal - The AbortSignal instance to cancel the download.
+ * @param {ProgressCallback} [progressCallback] - An optional callback function to track the download progress.
+ * @param {boolean} ignoreFailure - When "true", failure to download the file is ignore (no log and no thrown error).
+ * @returns {Promise<void>} - A Promise that resolves when the download is complete.
+ * @throws {Error} - If the download fails or is incomplete.
+ */
+export async function downloadFile({
+  url,
+  dest,
+  abortSignal,
+  progressCallback,
+  ignoreFailure
+}: DownloadArgs): Promise<void> {
+  let lastProgressUpdateTime = Date.now()
+  let lastBytesWritten = 0
+  let fileSize = 0
+
+  const connections = 5
+  try {
+    const response = await axiosClient.head(url)
+    fileSize = parseInt(response.headers['content-length'], 10)
+  } catch (err) {
+    if (!ignoreFailure) {
+      logError(
+        `Downloader: Failed to get headers for ${url}. \nError: ${err}`,
+        LogPrefix.DownloadManager
+      )
+      throw new Error('Failed to get headers')
+    } else {
+      return
+    }
+  }
+
+  try {
+    const dl = new EasyDl(url, dest, {
+      existBehavior: 'overwrite',
+      connections
+    }).start()
+
+    abortSignal?.addEventListener('abort', () => {
+      dl.destroy()
+    })
+
+    dl.on('error', (error) => {
+      logError(error, LogPrefix.Backend)
+    })
+
+    dl.on('retry', (retry) => {
+      logInfo(`Retrying download: ${retry}`, LogPrefix.Backend)
+    })
+
+    const throttledProgressCallback = throttle(
+      (
+        bytes: number,
+        speed: number,
+        percentage: number,
+        writingSpeed: number
+      ) => {
+        if (progressCallback) {
+          logInfo(
+            `Downloaded: ${bytesToSize(bytes)} / ${bytesToSize(
+              fileSize
+            )}  @${bytesToSize(speed)}/s (${percentage.toFixed(2)}%)`,
+            LogPrefix.Backend
+          )
+          progressCallback(bytes, speed, percentage, writingSpeed)
+        }
+      },
+      1000
+    ) // Throttle progress reporting to 1 second
+
+    dl.on('progress', ({ total }) => {
+      const { bytes = 0, speed = 0, percentage = 0 } = total
+      const currentTime = Date.now()
+      const timeElapsed = currentTime - lastProgressUpdateTime
+
+      if (timeElapsed >= 1000) {
+        const bytesWrittenSinceLastUpdate = bytes - lastBytesWritten
+        const writingSpeed = bytesWrittenSinceLastUpdate / (timeElapsed / 1000) // Bytes per second
+
+        throttledProgressCallback(bytes, speed, percentage, writingSpeed)
+
+        lastProgressUpdateTime = currentTime
+        lastBytesWritten = bytes
+      }
+    })
+
+    const downloaded = await dl.wait()
+
+    if (!downloaded) {
+      logWarning(
+        `Downloader: Download stopped or paused`,
+        LogPrefix.DownloadManager
+      )
+      throw new Error('Download stopped or paused')
+    }
+
+    logInfo(
+      `Downloader: Finished downloading ${url}`,
+      LogPrefix.DownloadManager
+    )
+  } catch (err) {
+    if (!ignoreFailure) {
+      logError(
+        `Downloader: Download Failed with: ${err}`,
+        LogPrefix.DownloadManager
+      )
+      throw new Error(`Download failed with ${err}`)
+    } else {
+      return
+    }
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function throttle<T extends (...args: any[]) => any>(
+  callback: T,
+  limit: number
+): (...args: Parameters<T>) => void {
+  let lastCall = 0
+  return (...args: Parameters<T>) => {
+    const now = Date.now()
+    if (now - lastCall >= limit) {
+      lastCall = now
+      callback(...args)
+    }
+  }
+}
+
+function bytesToSize(bytes: number) {
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+  if (bytes === 0) return `0 ${sizes[0]}`
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`
+}
+
+function formatTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds - hours * 3600) / 60)
+  const remainingSeconds = seconds - hours * 3600 - minutes * 60
+  return `${hours.toString().padStart(2, '0')}:${minutes
+    .toString()
+    .padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+}
+
+function calculateEta(
+  downloadedBytes: number,
+  downloadSpeed: number,
+  downloadSize: number,
+  lastProgressTime: number = Date.now()
+): string | null {
+  // Calculate the remaining seconds
+  const remainingBytes = downloadSize - downloadedBytes
+  const elapsedSeconds = (Date.now() - lastProgressTime) / 1000
+  const remainingSeconds = remainingBytes / downloadSpeed - elapsedSeconds
+
+  // Check if the download has completed or failed
+  if (remainingSeconds <= 0) {
+    return '00:00:00'
+  } else if (!isFinite(remainingSeconds)) {
+    return null
+  }
+
+  // Format the remaining seconds as "hh:mm:ss"
+  const eta = formatTime(Math.floor(remainingSeconds))
+  return eta
+}
+
+interface ExtractOptions {
+  path: string
+  destination: string
+  strip: number
+}
+
+async function extractFiles({ path, destination, strip = 0 }: ExtractOptions) {
+  if (path.includes('.tar')) return extractTarFile({ path, destination, strip })
+
+  logError(['extractFiles: Unsupported file', path], LogPrefix.Backend)
+  return { status: 'error', error: 'Unsupported file type' }
+}
+
+async function extractTarFile({
+  path,
+  destination,
+  strip = 0
+}: ExtractOptions) {
+  const { code, stderr } = await spawnAsync('tar', [
+    '-xf',
+    path,
+    '-C',
+    destination,
+    `--strip-components=${strip}`
+  ])
+  if (code !== 0) {
+    logError(`Extracting Error: ${stderr}`, LogPrefix.Backend)
+    return { status: 'error', error: stderr }
+  }
+  return { status: 'done', installPath: destination }
+}
+
+const axiosClient = axios.create({
+  timeout: 10 * 1000,
+  httpsAgent: new https.Agent({ keepAlive: true })
+})
+
 export {
   errorHandler,
   execAsync,
@@ -1144,24 +1529,29 @@ export {
   resetHeroic,
   getLegendaryBin,
   getGOGdlBin,
+  getCometBin,
+  getNileBin,
   formatEpicStoreUrl,
-  searchForExecutableOnPath,
   getSteamRuntime,
   constructAndUpdateRPC,
   quoteIfNecessary,
   removeQuoteIfNecessary,
   detectVCRedist,
-  getGame,
   killPattern,
+  shutdownWine,
   getInfo,
   getShellPath,
-  getFirstExistingParentPath,
   getLatestReleases,
-  getSystemInfo,
   getWineFromProton,
   getFileSize,
-  getLegendaryVersion,
-  getGogdlVersion
+  memoryLog,
+  removeFolder,
+  getPathDiskSize,
+  sendGameStatusUpdate,
+  sendProgressUpdate,
+  calculateEta,
+  extractFiles,
+  axiosClient
 }
 
 // Exported only for testing purpose

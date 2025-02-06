@@ -33,3 +33,6 @@ vite-plugin-electron.log
 
 #flatpak
 flatpak-build
+.env
+
+playwright-report

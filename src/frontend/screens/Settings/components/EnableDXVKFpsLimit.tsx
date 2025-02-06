@@ -6,6 +6,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleInfo } from '@fortawesome/free-solid-svg-icons'
 import SettingsContext from '../SettingsContext'
+import { defaultWineVersion } from '..'
 
 const EnableDXVKFpsLimit = () => {
   const { t } = useTranslation()
@@ -17,8 +18,14 @@ const EnableDXVKFpsLimit = () => {
     false
   )
   const [DXVKFpsCap, setDXVKFpsCap] = useSetting('DXVKFpsCap', '')
+  const [wineVersion] = useSetting('wineVersion', defaultWineVersion)
 
-  if (isWin || isLinuxNative || isMacNative) {
+  if (
+    isWin ||
+    isLinuxNative ||
+    isMacNative ||
+    wineVersion.bin.includes('toolkit')
+  ) {
     return <></>
   }
 
@@ -44,7 +51,7 @@ const EnableDXVKFpsLimit = () => {
           htmlId="DXVKFpsLimitValue"
           placeholder={t(
             'placeholder.dxvkfpsvalue',
-            'Postive integer value (e.g. 30, 60, ...)'
+            'Positive integer value (e.g. 30, 60, ...)'
           )}
           value={DXVKFpsCap}
           onChange={(event) => setDXVKFpsCap(event.target.value)}

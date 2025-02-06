@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'graceful-fs'
-import { heroicIconFolder } from '../constants'
-import { GameInfo, SideloadGame } from 'common/types'
-import { spawnSync } from 'child_process'
+import { heroicIconFolder as iconsFolder } from '../constants'
+import { GameInfo } from 'common/types'
 import { basename, dirname, extname, join } from 'path'
+import { getProductApi } from 'backend/storeManagers/gog/library'
+import { downloadFile } from 'backend/utils'
+import { createAbortController } from 'backend/utils/aborthandler/aborthandler'
 
 function createImage(
   buffer: Buffer,
@@ -23,7 +25,11 @@ function downloadImage(
   outputFilePath: string
 ): string | undefined {
   try {
-    spawnSync('curl', ['-L', imageURL, '-o', outputFilePath])
+    downloadFile({
+      url: imageURL,
+      dest: outputFilePath,
+      abortSignal: createAbortController(imageURL).signal
+    })
   } catch (error) {
     return `Donwloading of ${imageURL} failed with:\n${error}`
   }
@@ -52,16 +58,36 @@ function checkImageExistsAlready(image: string): boolean {
   return found !== undefined ? true : false
 }
 
-async function getIcon(appName: string, gameInfo: GameInfo | SideloadGame) {
-  if (!existsSync(heroicIconFolder)) {
-    mkdirSync(heroicIconFolder)
+async function getIcon(appName: string, gameInfo: GameInfo) {
+  if (!existsSync(iconsFolder)) {
+    mkdirSync(iconsFolder)
   }
 
-  const image = gameInfo.art_square
-    .replaceAll(' ', '%20')
-    .replace('{ext}', 'jpg')
+  // By default use vertical image - art_square in jpg format
+  let image = gameInfo.art_square.replaceAll(' ', '%20').replace('{ext}', 'jpg')
+  let icon = `${iconsFolder}/${appName}.jpg`
 
-  const icon = `${heroicIconFolder}/${appName}.jpg`
+  if (gameInfo.runner === 'gog') {
+    const icoPath = join(
+      gameInfo.install.install_path!,
+      `goggame-${appName}.ico`
+    )
+    const linuxNativePath = join(
+      gameInfo.install.install_path!,
+      'support',
+      'icon.png'
+    )
+    if (existsSync(icoPath)) {
+      return icoPath
+    } else if (existsSync(linuxNativePath)) {
+      return linuxNativePath
+    }
+    const productApiData = await getProductApi(appName)
+    if (productApiData && productApiData.data.images?.icon) {
+      image = 'https:' + productApiData.data.images?.icon
+      icon = `${iconsFolder}/${appName}.png` // Allow transparency
+    }
+  }
 
   if (!checkImageExistsAlready(icon)) {
     downloadImage(image, icon)

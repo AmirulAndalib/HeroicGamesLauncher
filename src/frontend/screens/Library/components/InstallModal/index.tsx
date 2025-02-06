@@ -1,5 +1,5 @@
 import { faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
-import { IconDefinition } from '@fortawesome/free-solid-svg-icons'
+import { IconDefinition, faGlobe } from '@fortawesome/free-solid-svg-icons'
 
 import React, { useContext, useEffect, useState } from 'react'
 
@@ -12,13 +12,14 @@ import {
 } from 'common/types'
 import { Dialog } from 'frontend/components/UI/Dialog'
 
-import './index.css'
+import './index.scss'
 
 import DownloadDialog from './DownloadDialog'
 import SideloadDialog from './SideloadDialog'
 import WineSelector from './WineSelector'
 import { SelectField } from 'frontend/components/UI'
 import { useTranslation } from 'react-i18next'
+import ThirdPartyDialog from './ThirdPartyDialog'
 
 type Props = {
   appName: string
@@ -60,7 +61,7 @@ export default React.memo(function InstallModal({
     {
       name: 'Linux',
       available: isLinux && (isSideload || isLinuxNative),
-      value: 'linux',
+      value: 'Linux',
       icon: faLinux
     },
     {
@@ -74,6 +75,12 @@ export default React.memo(function InstallModal({
       available: true,
       value: 'Windows',
       icon: faWindows
+    },
+    {
+      name: 'Browser',
+      available: isSideload,
+      value: 'Browser',
+      icon: faGlobe
     }
   ]
 
@@ -120,7 +127,7 @@ export default React.memo(function InstallModal({
   }, [hasWine])
 
   function platformSelection() {
-    const showPlatformSelection = !isWin && availablePlatforms.length > 1
+    const showPlatformSelection = availablePlatforms.length > 1
 
     if (!showPlatformSelection) {
       return null
@@ -146,15 +153,44 @@ export default React.memo(function InstallModal({
   }
 
   const showDownloadDialog = !isSideload && gameInfo
+  const isThirdPartyManagedApp = gameInfo && !!gameInfo.thirdPartyManagedApp
 
   return (
     <div className="InstallModal">
       <Dialog
         onClose={backdropClick}
         showCloseButton
-        className={'InstallModal__dialog'}
+        className="InstallModal__dialog"
       >
-        {showDownloadDialog ? (
+        {isThirdPartyManagedApp ? (
+          <ThirdPartyDialog
+            appName={appName}
+            runner={runner}
+            winePrefix={winePrefix}
+            wineVersion={wineVersion}
+            availablePlatforms={availablePlatforms}
+            backdropClick={backdropClick}
+            platformToInstall={platformToInstall}
+            gameInfo={gameInfo}
+            crossoverBottle={crossoverBottle}
+          >
+            {platformSelection()}
+            {hasWine ? (
+              <WineSelector
+                appName={appName}
+                winePrefix={winePrefix}
+                wineVersion={wineVersion}
+                wineVersionList={wineVersionList}
+                title={gameInfo?.title}
+                setWinePrefix={setWinePrefix}
+                setWineVersion={setWineVersion}
+                crossoverBottle={crossoverBottle}
+                setCrossoverBottle={setCrossoverBottle}
+                initiallyOpen
+              />
+            ) : null}
+          </ThirdPartyDialog>
+        ) : showDownloadDialog ? (
           <DownloadDialog
             appName={appName}
             runner={runner}
@@ -169,6 +205,7 @@ export default React.memo(function InstallModal({
             {platformSelection()}
             {hasWine ? (
               <WineSelector
+                appName={appName}
                 winePrefix={winePrefix}
                 wineVersion={wineVersion}
                 wineVersionList={wineVersionList}
@@ -194,6 +231,7 @@ export default React.memo(function InstallModal({
             {platformSelection()}
             {hasWine ? (
               <WineSelector
+                appName={appName}
                 winePrefix={winePrefix}
                 wineVersion={wineVersion}
                 wineVersionList={wineVersionList}

@@ -1,40 +1,32 @@
-import React, { MouseEvent, useEffect, useState } from 'react'
-import { AntiCheatInfo, GameInfo, SideloadGame } from 'common/types'
+import React, { MouseEvent, useContext } from 'react'
+import { AntiCheatInfo } from 'common/types'
 import { createNewWindow } from 'frontend/helpers'
 
-import { ReactComponent as InfoIcon } from 'frontend/assets/info_icon.svg'
-import { ReactComponent as DeniedIcon } from 'frontend/assets/denied_icon.svg'
-import { ReactComponent as AllowedIcon } from 'frontend/assets/rounded_checkmark_icon.svg'
+import InfoIcon from 'frontend/assets/info_icon.svg?react'
+import DeniedIcon from 'frontend/assets/denied_icon.svg?react'
+import AllowedIcon from 'frontend/assets/rounded_checkmark_icon.svg?react'
 
 import './index.scss'
 import { useTranslation } from 'react-i18next'
+import ContextProvider from 'frontend/state/ContextProvider'
 
 type Props = {
-  gameInfo: GameInfo | SideloadGame
+  anticheatInfo: AntiCheatInfo | null
 }
 
 const awacyUrl = 'https://areweanticheatyet.com/'
 
-export default function Anticheat({ gameInfo }: Props) {
+export default function Anticheat({ anticheatInfo }: Props) {
   const { t } = useTranslation()
-
-  const [anticheatInfo, setAnticheatInfo] = useState<AntiCheatInfo | null>(null)
-
-  useEffect(() => {
-    if (gameInfo.runner !== 'sideload' && gameInfo.title) {
-      window.api
-        .getAnticheatInfo(gameInfo.namespace)
-        .then((anticheatInfo: AntiCheatInfo | null) => {
-          setAnticheatInfo(anticheatInfo)
-        })
-    }
-  }, [gameInfo])
+  const { platform } = useContext(ContextProvider)
 
   if (!anticheatInfo) {
     return null
   }
 
-  const mayNotWork = ['Denied', 'Broken'].includes(anticheatInfo.status)
+  const mayNotWork = ['Denied', 'Broken', 'Unknown'].includes(
+    anticheatInfo.status
+  )
 
   const latestUpdate =
     anticheatInfo.reference ||
@@ -73,8 +65,8 @@ export default function Anticheat({ gameInfo }: Props) {
         {mayNotWork && (
           <p>
             {t(
-              'anticheat.may_not_work',
-              'It may not work due to denied or broken anticheat support.'
+              'anticheat.multiplayer_may_not_work',
+              'Multiplayer features may not work due to denied or broken anticheat support.'
             )}
           </p>
         )}
@@ -93,12 +85,14 @@ export default function Anticheat({ gameInfo }: Props) {
           )}
         </span>
 
-        <span>
-          <b>{t('anticheat.source', 'Source')}:</b>&nbsp;
-          <a href="#" onClick={onAWACYClick}>
-            AreWeAntiCheatYet
-          </a>
-        </span>
+        {platform === 'linux' && (
+          <span>
+            <b>{t('anticheat.source', 'Source')}:</b>&nbsp;
+            <a href="#" onClick={onAWACYClick}>
+              AreWeAntiCheatYet
+            </a>
+          </span>
+        )}
       </div>
     </div>
   )

@@ -6,21 +6,26 @@ import {
   DialogFooter,
   DialogHeader
 } from 'frontend/components/UI/Dialog'
-import ContextProvider from 'frontend/state/ContextProvider'
 import { useTranslation } from 'react-i18next'
 import { Runner } from 'common/types'
 import ToggleSwitch from '../ToggleSwitch'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import ContextProvider from 'frontend/state/ContextProvider'
 
 interface UninstallModalProps {
   appName: string
   runner: Runner
   onClose: () => void
+  isDlc: boolean
 }
 
-const UninstallModal: React.FC<UninstallModalProps> = function (props) {
-  const { platform, refreshLibrary } = useContext(ContextProvider)
-  const [isWindowsOnLinux, setIsWindowsOnLinux] = useState(false)
+const UninstallModal: React.FC<UninstallModalProps> = function ({
+  appName,
+  runner,
+  onClose,
+  isDlc
+}) {
+  const [isNative, setIsNative] = useState(true)
   const [winePrefix, setWinePrefix] = useState('')
   const [deletePrefixChecked, setDeletePrefixChecked] = useState(false)
   const [deleteSettingsChecked, setDeleteSettingsChecked] = useState(false)
@@ -28,79 +33,150 @@ const UninstallModal: React.FC<UninstallModalProps> = function (props) {
   const { t } = useTranslation('gamepage')
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const { installingEpicGame, libraryStatus } = useContext(ContextProvider)
+  const [gameTitle, setGameTitle] = useState('')
 
-  const checkIfWindowsOnLinux = async () => {
+  const isGameRunning = libraryStatus.find(
+    (st) =>
+      st.appName === appName && st.runner === runner && st.status === 'playing'
+  )
+
+  const checkIfIsNative = async () => {
     // This assumes native games are installed should be changed in the future
     // if we add option to install windows games even if native is available
 
     setShowUninstallModal(true)
 
-    if (platform !== 'linux') {
+    const gameInfo = await window.api.getGameInfo(appName, runner)
+
+    const isNative = await window.api.isNative({
+      runner,
+      appName
+    })
+    setIsNative(isNative)
+
+    if (isDlc) {
       return
     }
 
-    const gameInfo = await window.api.getGameInfo(props.appName, props.runner)
     if (!gameInfo) {
       return
     }
+
+    setGameTitle(gameInfo.title)
 
     const { install } = gameInfo
     if (install.platform?.toLowerCase() !== 'windows') {
       return
     }
 
-    const gameSettings = await window.api.getGameSettings(
-      props.appName,
-      props.runner
-    )
+    const gameSettings = await window.api.getGameSettings(appName, runner)
     if (!gameSettings) {
       return
     }
 
     const defaultSettings = await window.api.requestGameSettings('default')
 
-    setIsWindowsOnLinux(true)
     setWinePrefix(gameSettings.winePrefix)
     setDisableDeleteWine(gameSettings.winePrefix === defaultSettings.winePrefix)
   }
 
   useEffect(() => {
-    checkIfWindowsOnLinux()
+    checkIfIsNative()
   }, [])
 
   const storage: Storage = window.localStorage
   const uninstallGame = async () => {
-    props.onClose()
+    onClose()
 
     await window.api.uninstall(
-      props.appName,
-      props.runner,
+      appName,
+      runner,
       deletePrefixChecked,
       deleteSettingsChecked
     )
-    if (props.runner === 'sideload') {
-      navigate('/')
+    if (runner === 'sideload' && location.pathname.match(/gamepage/)) {
+      navigate('/#library')
     }
-    storage.removeItem(props.appName)
-    refreshLibrary({ fullRefresh: true, checkForUpdates: false })
+    storage.removeItem(appName)
   }
 
+  const showWineCheckbox = !isNative && !isDlc
+
+  // disallow uninstalling epic games if an epic game is being installed
+  if (installingEpicGame && runner === 'legendary') {
+    return (
+      <>
+        {showUninstallModal && (
+          <Dialog onClose={onClose} showCloseButton className="uninstall-modal">
+            <DialogHeader onClose={onClose}>
+              {t('gamepage:box.uninstall.title')}
+            </DialogHeader>
+            <DialogContent>
+              {t(
+                'gamepage:box.uninstall.cannotUninstallEpic',
+                'Epic games cannot be uninstalled while another Epic game is being installed.'
+              )}
+            </DialogContent>
+            <DialogFooter>
+              <button onClick={onClose} className={`button outline`}>
+                {t('box.close', 'Close')}
+              </button>
+            </DialogFooter>
+          </Dialog>
+        )}
+      </>
+    )
+  }
+
+  if (isGameRunning) {
+    return (
+      <>
+        {showUninstallModal && (
+          <Dialog onClose={onClose} showCloseButton className="uninstall-modal">
+            <DialogHeader onClose={onClose}>
+              {t('gamepage:box.uninstall.title')}
+            </DialogHeader>
+            <DialogContent>
+              {t('gamepage:box.uninstall.gameIsRunning', {
+                defaultValue:
+                  '{{title}} is running. Close the game to uninstall it.',
+                title: gameTitle
+              })}
+            </DialogContent>
+            <DialogFooter>
+              <button onClick={onClose} className={`button outline`}>
+                {t('box.close', 'Close')}
+              </button>
+            </DialogFooter>
+          </Dialog>
+        )}
+      </>
+    )
+  }
+
+  // normal dialog to uninstall a game
   return (
     <>
       {showUninstallModal && (
-        <Dialog
-          onClose={props.onClose}
-          showCloseButton
-          className="uninstall-modal"
-        >
-          <DialogHeader onClose={props.onClose}>
+        <Dialog onClose={onClose} showCloseButton className="uninstall-modal">
+          <DialogHeader onClose={onClose}>
             {t('gamepage:box.uninstall.title')}
           </DialogHeader>
           <DialogContent>
             <div className="uninstallModalMessage">
-              {t('gamepage:box.uninstall.message')}
+              {isDlc
+                ? t('gamepage:box.uninstall.dlc', {
+                    defaultValue: 'Do you want to uninstall "{{title}}" (DLC)?',
+                    title: gameTitle
+                  })
+                : t('gamepage:box.uninstall.message', {
+                    defaultValue: 'Do you want to uninstall "{{title}}"?',
+                    title: gameTitle
+                  })}
             </div>
-            {isWindowsOnLinux && (
+            {showWineCheckbox && (
               <ToggleSwitch
                 htmlId="uninstallCheckbox"
                 value={deletePrefixChecked}
@@ -124,18 +200,20 @@ const UninstallModal: React.FC<UninstallModalProps> = function (props) {
                 )}
               </p>
             )}
-            <ToggleSwitch
-              htmlId="uninstallsettingCheckbox"
-              value={deleteSettingsChecked}
-              title={t('gamepage:box.uninstall.settingcheckbox', {
-                defaultValue:
-                  "Erase settings and remove log{{newLine}}Note: This can't be undone. Any modified settings will be forgotten and log will be deleted.",
-                newLine: '\n'
-              })}
-              handleChange={() => {
-                setDeleteSettingsChecked(!deleteSettingsChecked)
-              }}
-            />
+            {!isDlc && (
+              <ToggleSwitch
+                htmlId="uninstallsettingCheckbox"
+                value={deleteSettingsChecked}
+                title={t('gamepage:box.uninstall.settingcheckbox', {
+                  defaultValue:
+                    "Erase settings and remove log{{newLine}}Note: This can't be undone. Any modified settings will be forgotten and log will be deleted.",
+                  newLine: '\n'
+                })}
+                handleChange={() => {
+                  setDeleteSettingsChecked(!deleteSettingsChecked)
+                }}
+              />
+            )}
           </DialogContent>
           <DialogFooter>
             <button
@@ -144,10 +222,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function (props) {
             >
               {t('box.yes')}
             </button>
-            <button
-              onClick={props.onClose}
-              className={`button is-secondary outline`}
-            >
+            <button onClick={onClose} className={`button is-secondary outline`}>
               {t('box.no')}
             </button>
           </DialogFooter>

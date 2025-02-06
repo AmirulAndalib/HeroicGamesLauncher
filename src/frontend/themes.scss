@@ -6,6 +6,14 @@ body {
   --tertiary-button-overlay: var(--status-warning-hover);
   --cancel-button: var(--status-warning);
   --cancel-button-overlay: var(--status-warning-hover);
+  --background-darker-80: var(--eighty-percent-black);
+
+  --anticheat-denied: var(--status-danger);
+  --anticheat-broken: var(--status-warning);
+  --anticheat-running: var(--status-default);
+  --anticheat-supported: var(--status-success);
+  --anticheat-planned: var(--status-info);
+  --anticheat-unknown: var(--status-denied);
 }
 
 body.midnightMirage {
@@ -21,7 +29,6 @@ body.midnightMirage {
 
   --background: var(--neutral-02);
   --background-darker: var(--neutral-01);
-  --background-darker-80: var(--eighty-percent-black);
   --background-lighter: var(--neutral-03);
   --body-background: var(--background-darker);
   --input-background: var(--background-lighter);
@@ -77,11 +84,6 @@ body.midnightMirage {
   /* Status */
   --success: var(--status-success);
   --success-hover: var(--status-success-hover);
-  --anticheat-denied: var(--status-danger);
-  --anticheat-broken: var(--status-warning);
-  --anticheat-running: var(--status-default);
-  --anticheat-supported: var(--status-success);
-  --anticheat-planned: var(--status-info);
   --danger: var(--status-danger);
   --danger-hover: var(--status-danger-hover);
 
@@ -226,10 +228,16 @@ body.high-contrast {
   --primary-hover: #ff36a8;
   --danger: #ff0000;
   --text-title: #00ddff;
+  --text-hover: #00ddff;
   --icons-background: var(--background);
+  --action-icon-hover: var(--accent);
+  --action-icon-active: var(--accent);
   --osk-background: var(--body-background);
   --osk-button-background: var(--input-background);
   --osk-button-border: #ffffffff;
+  .heroicVersion {
+    color: var(--text-default);
+  }
 }
 
 body.dracula,
@@ -260,7 +268,7 @@ body.dracula-classic {
   --primary-hover: #f560b4;
   --danger: #ff5555;
   --text-title: #8be9fd;
-  --text-default: var(--text-title);
+  --text-default: white;
   --icons-background: #17131c;
   --osk-background: var(--body-background);
   --osk-button-background: var(--input-background);
@@ -268,6 +276,10 @@ body.dracula-classic {
   --action-icon: var(--text-default);
   --action-icon-hover: var(--text-hover);
   --action-icon-active: var(--accent);
+  --action-icon-hover: var(--accent);
+  .heroicVersion {
+    color: var(--text-default);
+  }
 }
 
 body.nord-light {
@@ -301,6 +313,7 @@ body.nord-light {
   --text-default: var(--text-title);
   --text-secondary: #393b41;
   --text-tertiary: var(--brand-text-01);
+  --text-hover: #5e81ac;
   --osk-background: var(--body-background);
   --osk-button-background: var(--input-background);
   --osk-button-border: var(--navbar-background);
@@ -328,6 +341,42 @@ body.nord-light {
   .currentDownload {
     color: var(--navbar-active);
     --success: #0bd48c;
+  }
+
+  .selectFieldWrapper select > option {
+    background: var(--background);
+  }
+
+  .heroicVersion:hover {
+    color: var(--navbar-active);
+  }
+  .contextMenu > .MuiPaper-root {
+    &,
+    & > .MuiMenu-list {
+      background-color: var(--input-background);
+      .MuiMenuItem-root:hover {
+        background-color: var(--navbar-accent);
+      }
+    }
+  }
+  .progressDialog.log-box,
+  .errorDialog.error-box {
+    background-color: #dde1e7;
+  }
+
+  .gameCard > .gameCardStatus {
+    color: var(--navbar-active);
+  }
+
+  .CategoriesManager__Dialog {
+    .MuiDialogContent-root {
+      .Category {
+        &:hover,
+        &:focus-within {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+      }
+    }
   }
 }
 
@@ -395,7 +444,7 @@ body.marine-classic {
   --osk-button-background: var(--input-background);
   --osk-button-border: var(--navbar-background);
   --action-icon: var(--text-default);
-  --action-icon-hover: var(--text-hover);
+  --action-icon-hover: var(--accent);
   --action-icon-active: var(--accent);
   --navbar-accent: var(--accent);
   --primary: #34aaf8;
@@ -427,7 +476,7 @@ body.zombie-classic {
   --osk-button-background: var(--input-background);
   --osk-button-border: #434343;
   --action-icon: var(--text-default);
-  --action-icon-hover: var(--text-hover);
+  --action-icon-hover: var(--accent);
   --action-icon-active: var(--accent);
   --primary-button: #14e8c8;
 }
@@ -457,8 +506,9 @@ body.old-school {
   --osk-button-background: var(--input-background);
   --osk-button-border: #434343;
   --action-icon: var(--text-default);
-  --action-icon-hover: var(--text-hover);
+  --action-icon-hover: var(--accent);
   --action-icon-active: var(--accent);
+  --primary-button: var(--success);
 }
 body.classic .sid-input,
 body.old-school .sid-input {

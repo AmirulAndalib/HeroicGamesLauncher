@@ -9,27 +9,21 @@ import {
   RefreshOptions,
   Runner,
   WineVersionInfo,
-  InstallParams,
   LibraryTopSectionOptions,
-  SideloadGame
+  ExperimentalFeatures,
+  Status
 } from 'common/types'
 import {
-  Category,
   DialogModalOptions,
-  ExternalLinkDialogOptions
+  ExternalLinkDialogOptions,
+  HelpItem
 } from 'frontend/types'
-import { TFunction, withTranslation } from 'react-i18next'
-import {
-  getGameInfo,
-  getLegendaryConfig,
-  getPlatform,
-  install,
-  launch,
-  notify
-} from '../helpers'
-import { i18n, t } from 'i18next'
+import { withTranslation } from 'react-i18next'
+import { getGameInfo, getLegendaryConfig, notify } from '../helpers'
+import { i18n, t, TFunction } from 'i18next'
 
 import ContextProvider from './ContextProvider'
+import { InstallModal } from 'frontend/screens/Library/components'
 
 import {
   configStore,
@@ -37,9 +31,13 @@ import {
   gogInstalledGamesStore,
   gogLibraryStore,
   libraryStore,
+  nileConfigStore,
+  nileLibraryStore,
   wineDownloaderInfoStore
 } from '../helpers/electronStores'
 import { sideloadLibrary } from 'frontend/helpers/electronStores'
+import { IpcRendererEvent } from 'electron'
+import { NileRegisterData } from 'common/types/nile'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -55,7 +53,6 @@ interface Props {
 }
 
 interface StateProps {
-  category: Category
   epic: {
     library: GameInfo[]
     username?: string
@@ -64,40 +61,68 @@ interface StateProps {
     library: GameInfo[]
     username?: string
   }
+  amazon: {
+    library: GameInfo[]
+    user_id?: string
+    username?: string
+  }
   wineVersions: WineVersionInfo[]
   error: boolean
-  filterText: string
-  filterPlatform: string
   gameUpdates: string[]
   language: string
-  layout: string
   libraryStatus: GameStatus[]
   libraryTopSection: string
-  platform: NodeJS.Platform | 'unknown'
+  platform: NodeJS.Platform
   refreshing: boolean
   refreshingInTheBackground: boolean
   hiddenGames: HiddenGame[]
-  showHidden: boolean
-  showFavourites: boolean
-  showNonAvailable: boolean
   favouriteGames: FavouriteGame[]
+  customCategories: Record<string, string[]>
+  currentCustomCategories: string[]
   theme: string
+  isFullscreen: boolean
+  isFrameless: boolean
   zoomPercent: number
   primaryFontFamily: string
   secondaryFontFamily: string
   allTilesInColor: boolean
+  titlesAlwaysVisible: boolean
   sidebarCollapsed: boolean
   activeController: string
   connectivity: { status: ConnectivityStatus; retryIn: number }
   dialogModalOptions: DialogModalOptions
   externalLinkDialogOptions: ExternalLinkDialogOptions
-  sideloadedLibrary: SideloadGame[]
+  sideloadedLibrary: GameInfo[]
   hideChangelogsOnStartup: boolean
   lastChangelogShown: string | null
   settingsModalOpen: {
     value: boolean
     type: 'settings' | 'log'
     gameInfo?: GameInfo | null
+  }
+  showInstallModal: {
+    show: boolean
+    gameInfo: GameInfo | null
+    appName: string
+    runner: Runner
+  }
+  helpItems: { [key: string]: HelpItem }
+  experimentalFeatures: ExperimentalFeatures
+  disableDialogBackdropClose: boolean
+}
+
+// function to load the new key or fallback to the old one
+const loadCurrentCategories = () => {
+  const currentCategories = storage.getItem('current_custom_categories') || null
+  if (!currentCategories) {
+    const currentCategory = storage.getItem('current_custom_category') || null
+    if (!currentCategory) {
+      return []
+    } else {
+      return [currentCategory]
+    }
+  } else {
+    return JSON.parse(currentCategories) as string[]
   }
 }
 
@@ -117,8 +142,12 @@ class GlobalState extends PureComponent<Props> {
 
     return games
   }
+  loadAmazonLibrary = (): Array<GameInfo> => {
+    const games = nileLibraryStore.get('library', [])
+
+    return games
+  }
   state: StateProps = {
-    category: (storage.getItem('category') as Category) || 'legendary',
     epic: {
       library: libraryStore.get('library', []),
       username: configStore.get_nodefault('userInfo.displayName')
@@ -127,27 +156,30 @@ class GlobalState extends PureComponent<Props> {
       library: this.loadGOGLibrary(),
       username: gogConfigStore.get_nodefault('userData.username')
     },
+    amazon: {
+      library: this.loadAmazonLibrary(),
+      user_id: nileConfigStore.get_nodefault('userData.user_id'),
+      username: nileConfigStore.get_nodefault('userData.name')
+    },
     wineVersions: wineDownloaderInfoStore.get('wine-releases', []),
     error: false,
-    filterText: '',
-    filterPlatform: 'all',
     gameUpdates: [],
     language: this.props.i18n.language,
-    layout: storage.getItem('layout') || 'grid',
     libraryStatus: [],
     libraryTopSection: globalSettings?.libraryTopSection || 'disabled',
-    platform: 'unknown',
+    platform: window.platform,
     refreshing: false,
     refreshingInTheBackground: true,
     hiddenGames: configStore.get('games.hidden', []),
-    showHidden: JSON.parse(storage.getItem('show_hidden') || 'false'),
-    showFavourites: JSON.parse(storage.getItem('show_favorites') || 'false'),
-    showNonAvailable: true,
+    currentCustomCategories: loadCurrentCategories(),
     sidebarCollapsed: JSON.parse(
       storage.getItem('sidebar_collapsed') || 'false'
     ),
     favouriteGames: configStore.get('games.favourites', []),
+    customCategories: configStore.get('games.customCategories', {}),
     theme: configStore.get('theme', ''),
+    isFullscreen: false,
+    isFrameless: false,
     zoomPercent: configStore.get('zoomPercent', 100),
     secondaryFontFamily:
       configStore.get_nodefault('contentFontFamily') ||
@@ -160,14 +192,40 @@ class GlobalState extends PureComponent<Props> {
         '--default-primary-font-family'
       ),
     allTilesInColor: configStore.get('allTilesInColor', false),
+    titlesAlwaysVisible: configStore.get('titlesAlwaysVisible', false),
     activeController: '',
     connectivity: { status: 'offline', retryIn: 0 },
+    showInstallModal: {
+      show: false,
+      appName: '',
+      runner: 'legendary',
+      gameInfo: null
+    },
     sideloadedLibrary: sideloadLibrary.get('games', []),
     dialogModalOptions: { showDialog: false },
     externalLinkDialogOptions: { showDialog: false },
     hideChangelogsOnStartup: globalSettings?.hideChangelogsOnStartup || false,
     lastChangelogShown: JSON.parse(storage.getItem('last_changelog') || 'null'),
-    settingsModalOpen: { value: false, type: 'settings', gameInfo: undefined }
+    settingsModalOpen: { value: false, type: 'settings', gameInfo: undefined },
+    helpItems: {},
+    experimentalFeatures: {
+      enableNewDesign: false,
+      enableHelp: false,
+      cometSupport: true,
+      ...(globalSettings?.experimentalFeatures || {})
+    },
+    disableDialogBackdropClose: configStore.get(
+      'disableDialogBackdropClose',
+      false
+    )
+  }
+
+  setCurrentCustomCategories = (newCustomCategories: string[]) => {
+    storage.setItem(
+      'current_custom_categories',
+      JSON.stringify(newCustomCategories)
+    )
+    this.setState({ currentCustomCategories: newCustomCategories })
   }
 
   setLanguage = (newLanguage: string) => {
@@ -213,16 +271,14 @@ class GlobalState extends PureComponent<Props> {
     this.setState({ allTilesInColor: value })
   }
 
-  setShowHidden = (value: boolean) => {
-    this.setState({ showHidden: value })
+  setTitlesAlwaysVisible = (value: boolean) => {
+    configStore.set('titlesAlwaysVisible', value)
+    this.setState({ titlesAlwaysVisible: value })
   }
 
-  setShowFavourites = (value: boolean) => {
-    this.setState({ showFavourites: value })
-  }
-
-  setShowNonAvailable = (value: boolean) => {
-    this.setState({ showNonAvailable: value })
+  setDisableDialogBackdropClose = (value: boolean) => {
+    configStore.set('disableDialogBackdropClose', value)
+    this.setState({ disableDialogBackdropClose: value })
   }
 
   setSideBarCollapsed = (value: boolean) => {
@@ -285,6 +341,81 @@ class GlobalState extends PureComponent<Props> {
     configStore.set('games.favourites', newFavouriteGames)
   }
 
+  getCustomCategories = () =>
+    Array.from(new Set(Object.keys(this.state.customCategories))).sort()
+
+  setCustomCategory = (newCategory: string) => {
+    const newCustomCategories = this.state.customCategories
+    newCustomCategories[newCategory] = []
+
+    // when adding a new category, if there are categories selected, select the new
+    // one too so the game doesn't disappear form the library
+    let newCurrentCustomCategories = this.state.currentCustomCategories
+    if (this.state.currentCustomCategories.length > 0) {
+      newCurrentCustomCategories = [...newCurrentCustomCategories, newCategory]
+    }
+
+    this.setState({
+      customCategories: newCustomCategories,
+      currentCustomCategories: newCurrentCustomCategories
+    })
+    configStore.set('games.customCategories', newCustomCategories)
+  }
+
+  removeCustomCategory = (category: string) => {
+    if (!this.state.customCategories[category]) return
+
+    const newCustomCategories = this.state.customCategories
+    delete newCustomCategories[category]
+
+    this.setState({ customCategories: { ...newCustomCategories } })
+    configStore.set('games.customCategories', newCustomCategories)
+  }
+
+  renameCustomCategory = (oldName: string, newName: string) => {
+    if (!this.state.customCategories[oldName]) return
+
+    const newCustomCategories = this.state.customCategories
+    newCustomCategories[newName] = newCustomCategories[oldName]
+    delete newCustomCategories[oldName]
+
+    this.setState({ customCategories: { ...newCustomCategories } })
+    configStore.set('games.customCategories', newCustomCategories)
+
+    const newCurrentCustomCategories =
+      this.state.currentCustomCategories.filter((cat) => cat !== oldName)
+    this.setCurrentCustomCategories([...newCurrentCustomCategories, newName])
+  }
+
+  addGameToCustomCategory = (category: string, appName: string) => {
+    const newCustomCategories = this.state.customCategories
+
+    if (!newCustomCategories[category]) newCustomCategories[category] = []
+
+    newCustomCategories[category].push(appName)
+
+    this.setState({
+      customCategories: newCustomCategories
+    })
+    configStore.set('games.customCategories', newCustomCategories)
+  }
+
+  removeGameFromCustomCategory = (category: string, appName: string) => {
+    if (!this.state.customCategories[category]) return
+
+    const newCustomCategories: Record<string, string[]> = {}
+    for (const [key, games] of Object.entries(this.state.customCategories)) {
+      if (key === category)
+        newCustomCategories[key] = games.filter((game) => game !== appName)
+      else newCustomCategories[key] = this.state.customCategories[key]
+    }
+
+    this.setState({
+      customCategories: newCustomCategories
+    })
+    configStore.set('games.customCategories', newCustomCategories)
+  }
+
   handleShowDialogModal = ({
     showDialog = true,
     ...options
@@ -299,7 +430,7 @@ class GlobalState extends PureComponent<Props> {
       title: t('box.reset-heroic.question.title', 'Reset Heroic'),
       message: t(
         'box.reset-heroic.question.message',
-        "Are you sure you want to reset Heroic? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of heroic needs to be restarted manually afterwards."
+        "Are you sure you want to reset Heroic? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of Heroic needs to be restarted manually afterwards."
       ),
       buttons: [
         { text: t('box.yes'), onClick: window.api.resetHeroic },
@@ -316,10 +447,13 @@ class GlobalState extends PureComponent<Props> {
     this.setState({ libraryTopSection: value })
   }
 
+  handleExperimentalFeatures = (value: ExperimentalFeatures) => {
+    this.setState({ experimentalFeatures: value })
+  }
+
   handleSuccessfulLogin = (runner: Runner) => {
-    this.handleCategory('all')
+    storage.setItem('category', 'all')
     this.refreshLibrary({
-      fullRefresh: true,
       runInBackground: false,
       library: runner
     })
@@ -377,7 +511,7 @@ class GlobalState extends PureComponent<Props> {
   }
 
   gogLogout = async () => {
-    await window.api.logoutGOG()
+    window.api.logoutGOG()
     this.setState({
       gog: {
         library: [],
@@ -388,10 +522,44 @@ class GlobalState extends PureComponent<Props> {
     window.location.reload()
   }
 
+  amazonLogin = async (data: NileRegisterData) => {
+    console.log('logging amazon')
+    const response = await window.api.authAmazon(data)
+
+    if (response.status === 'done') {
+      this.setState({
+        amazon: {
+          library: [],
+          user_id: response.user?.user_id,
+          username: response.user?.name
+        }
+      })
+
+      this.handleSuccessfulLogin('nile')
+    }
+
+    return response.status
+  }
+
+  amazonLogout = async () => {
+    await window.api.logoutAmazon()
+    this.setState({
+      amazon: {
+        library: [],
+        user_id: null,
+        username: null
+      }
+    })
+    console.log('Logging out from amazon')
+    window.location.reload()
+  }
+
+  getAmazonLoginData = async () => window.api.getAmazonLoginData()
+
   handleSettingsModalOpen = (
     value: boolean,
-    type?: 'settings' | 'log',
-    gameInfo?: GameInfo | SideloadGame
+    type?: 'settings' | 'log' | 'category',
+    gameInfo?: GameInfo
   ) => {
     if (gameInfo) {
       this.setState({
@@ -410,17 +578,9 @@ class GlobalState extends PureComponent<Props> {
   ): Promise<void> => {
     console.log('refreshing')
 
-    const currentLibraryLength = this.state.epic.library?.length
-    let epicLibrary = libraryStore.get('library', [])
+    const { epic, gog, amazon, gameUpdates } = this.state
 
-    const gogLibrary = this.loadGOGLibrary()
-    if (!epicLibrary.length || !this.state.epic.library.length) {
-      window.api.logInfo('No cache found, getting data from legendary...')
-      const { library: legendaryLibrary } = await getLegendaryConfig()
-      epicLibrary = legendaryLibrary
-    }
-
-    let updates = this.state.gameUpdates
+    let updates = gameUpdates
     if (checkUpdates) {
       try {
         updates = await window.api.checkGameUpdates()
@@ -429,16 +589,44 @@ class GlobalState extends PureComponent<Props> {
       }
     }
 
+    const currentLibraryLength = epic.library?.length
+
+    let epicLibrary = libraryStore.get('library', [])
+    if (epic.username && (!epicLibrary.length || !epic.library.length)) {
+      window.api.logInfo('No cache found, getting data from legendary...')
+      const { library: legendaryLibrary } = await getLegendaryConfig()
+      epicLibrary = legendaryLibrary
+    }
+
+    let gogLibrary = this.loadGOGLibrary()
+    if (gog.username && (!gogLibrary.length || !gog.library.length)) {
+      window.api.logInfo('No cache found, getting data from gog...')
+      await window.api.refreshLibrary('gog')
+      gogLibrary = this.loadGOGLibrary()
+    }
+
+    let amazonLibrary = nileLibraryStore.get('library', [])
+    if (amazon.user_id && (!amazonLibrary.length || !amazon.library.length)) {
+      window.api.logInfo('No cache found, getting data from nile...')
+      await window.api.refreshLibrary('nile')
+      amazonLibrary = this.loadAmazonLibrary()
+    }
+
     const updatedSideload = sideloadLibrary.get('games', [])
 
     this.setState({
       epic: {
         library: epicLibrary,
-        username: this.state.epic.username
+        username: epic.username
       },
       gog: {
         library: gogLibrary,
-        username: this.state.gog.username
+        username: gog.username
+      },
+      amazon: {
+        library: amazonLibrary,
+        user_id: amazon.user_id,
+        username: amazon.username
       },
       gameUpdates: updates,
       refreshing: false,
@@ -454,7 +642,6 @@ class GlobalState extends PureComponent<Props> {
 
   refreshLibrary = async ({
     checkForUpdates,
-    fullRefresh,
     runInBackground = true,
     library = undefined
   }: RefreshOptions): Promise<void> => {
@@ -464,9 +651,9 @@ class GlobalState extends PureComponent<Props> {
       refreshing: true,
       refreshingInTheBackground: runInBackground
     })
-    window.api.logInfo('Refreshing Library')
+    window.api.logInfo(`Refreshing ${library} Library`)
     try {
-      await window.api.refreshLibrary(fullRefresh, library)
+      await window.api.refreshLibrary(library)
       return await this.refresh(library, checkForUpdates)
     } catch (error) {
       window.api.logError(`${error}`)
@@ -502,16 +689,11 @@ class GlobalState extends PureComponent<Props> {
       })
   }
 
-  handleSearch = (input: string) => this.setState({ filterText: input })
-  handlePlatformFilter = (filterPlatform: string) =>
-    this.setState({ filterPlatform })
-  handleLayout = (layout: string) => this.setState({ layout })
-  handleCategory = (category: Category) => this.setState({ category })
-
   handleGameStatus = async ({
     appName,
     status,
     folder,
+    context,
     progress,
     runner
   }: GameStatus) => {
@@ -523,13 +705,13 @@ class GlobalState extends PureComponent<Props> {
       return this.setState({
         libraryStatus: [
           ...libraryStatus,
-          { appName, status, folder, progress, runner }
+          { appName, status, folder, context, progress, runner }
         ]
       })
     }
 
     // if the app's status didn't change, do nothing
-    if (currentApp.status === status) {
+    if (currentApp.status === status && currentApp.context === context) {
       return
     }
 
@@ -539,9 +721,26 @@ class GlobalState extends PureComponent<Props> {
     )
 
     // in these cases we just add the new status
-    if (['installing', 'updating', 'playing'].includes(status)) {
-      currentApp.status = status
-      newLibraryStatus.push(currentApp)
+    if (
+      [
+        'installing',
+        'updating',
+        'playing',
+        'extracting',
+        'launching',
+        'winetricks',
+        'redist',
+        'queued'
+      ].includes(status)
+    ) {
+      newLibraryStatus.push({
+        appName,
+        status,
+        folder,
+        context,
+        progress,
+        runner
+      })
       this.setState({ libraryStatus: newLibraryStatus })
     }
 
@@ -559,6 +758,7 @@ class GlobalState extends PureComponent<Props> {
           library: runner
         })
 
+        storage.setItem('updates', JSON.stringify(updatedGamesUpdates))
         return this.setState({
           gameUpdates: updatedGamesUpdates,
           libraryStatus: newLibraryStatus
@@ -566,87 +766,87 @@ class GlobalState extends PureComponent<Props> {
       }
 
       this.refreshLibrary({ runInBackground: true, library: runner })
+
       this.setState({ libraryStatus: newLibraryStatus })
     }
   }
 
   async componentDidMount() {
-    const { t } = this.props
-    const { epic, gameUpdates = [], libraryStatus, category } = this.state
-    const oldCategory: string = category
-    if (oldCategory === 'epic') {
-      this.handleCategory('all')
-    }
-    // Deals launching from protocol. Also checks if the game is already running
-    window.api.handleLaunchGame(
-      async (
-        e: Event,
-        appName: string,
-        runner: Runner
-      ): Promise<{ status: 'done' | 'error' }> => {
-        const currentApp = libraryStatus.filter(
-          (game) => game.appName === appName
-        )[0]
-        if (!currentApp) {
-          return launch({
-            appName,
-            t,
-            runner,
-            hasUpdate: false,
-            showDialogModal: this.handleShowDialogModal
-          })
-        }
-        return { status: 'error' }
-      }
-    )
+    const { epic, gog, amazon, gameUpdates = [], libraryStatus } = this.state
 
-    // TODO: show the install modal instead of just installing like this since it has no options to choose
-    window.api.handleInstallGame(async (e: Event, args: InstallParams) => {
+    window.api.handleInstallGame(async (e, appName, runner) => {
       const currentApp = libraryStatus.filter(
         (game) => game.appName === appName
       )[0]
-      const { appName, path, runner } = args
       if (!currentApp || (currentApp && currentApp.status !== 'installing')) {
         const gameInfo = await getGameInfo(appName, runner)
         if (!gameInfo || gameInfo.runner === 'sideload') {
           return
         }
-        return install({
-          gameInfo,
-          installPath: path,
-          isInstalling: false,
-          previousProgress: null,
-          progress: {
-            bytes: '0.00MiB',
-            eta: '00:00:00',
-            percent: 0
-          },
-          t,
-          platformToInstall: 'Windows',
-          showDialogModal: this.handleShowDialogModal
+        return this.setState({
+          showInstallModal: {
+            show: true,
+            appName,
+            runner,
+            gameInfo
+          }
         })
       }
     })
 
-    window.api.handleGameStatus(async (e: Event, args: GameStatus) => {
-      return this.handleGameStatus({ ...args })
+    window.api.handleGameStatus((e, args) => {
+      this.handleGameStatus({ ...args })
     })
 
-    window.api.handleRefreshLibrary(async (e: Event, runner: Runner) => {
+    window.api.handleRefreshLibrary((e, runner) => {
       this.refreshLibrary({
         checkForUpdates: false,
-        fullRefresh: true,
         runInBackground: true,
         library: runner
       })
     })
 
+    window.api.handleGamePush((e: IpcRendererEvent, args: GameInfo) => {
+      if (!args.app_name) return
+      if (args.runner === 'gog') {
+        const library = [...this.state.gog.library]
+        const index = library.findIndex(
+          (game) => game.app_name === args.app_name
+        )
+        if (index !== -1) {
+          library[index] = args
+        } else {
+          library.push(args)
+        }
+        this.setState({
+          gog: {
+            library: [...library],
+            username: this.state.gog.username
+          }
+        })
+      }
+    })
+
+    this.setState({
+      isFullscreen: await window.api.isFullscreen(),
+      isFrameless: await window.api.isFrameless()
+    })
+    window.api.handleFullscreen(
+      (e: IpcRendererEvent, isFullscreen: boolean) => {
+        this.setState({ isFullscreen })
+      }
+    )
+
     const legendaryUser = configStore.has('userInfo')
     const gogUser = gogConfigStore.has('userData')
-    const platform = await getPlatform()
+    const amazonUser = nileConfigStore.has('userData')
 
     if (legendaryUser) {
       await window.api.getUserInfo()
+    }
+
+    if (amazonUser) {
+      await window.api.getAmazonUserInfo()
     }
 
     if (!gameUpdates.length) {
@@ -654,13 +854,13 @@ class GlobalState extends PureComponent<Props> {
       this.setState({ gameUpdates: storedGameUpdates })
     }
 
-    this.setState({ platform })
-
-    if (legendaryUser || gogUser) {
+    if (legendaryUser || gogUser || amazonUser) {
       this.refreshLibrary({
         checkForUpdates: true,
-        fullRefresh: true,
-        runInBackground: Boolean(epic.library.length)
+        runInBackground:
+          epic.library.length !== 0 ||
+          gog.library.length !== 0 ||
+          amazon.library.length !== 0
       })
     }
 
@@ -691,95 +891,172 @@ class GlobalState extends PureComponent<Props> {
     const {
       gameUpdates,
       libraryStatus,
-      layout,
-      category,
-      showHidden,
-      showFavourites,
       sidebarCollapsed,
       hideChangelogsOnStartup,
-      lastChangelogShown
+      lastChangelogShown,
+      language
     } = this.state
 
-    storage.setItem('category', category)
-    storage.setItem('layout', layout)
+    const isRTL = RTL_LANGUAGES.includes(language)
+    document.body.classList.toggle('isRTL', isRTL)
+
     storage.setItem('updates', JSON.stringify(gameUpdates))
-    storage.setItem('show_hidden', JSON.stringify(showHidden))
-    storage.setItem('show_favorites', JSON.stringify(showFavourites))
     storage.setItem('sidebar_collapsed', JSON.stringify(sidebarCollapsed))
     storage.setItem('hide_changelogs', JSON.stringify(hideChangelogsOnStartup))
     storage.setItem('last_changelog', JSON.stringify(lastChangelogShown))
 
-    const pendingOps = libraryStatus.filter(
-      (game) => game.status !== 'playing' && game.status !== 'done'
+    const allowedPendingOps: Status[] = [
+      'installing',
+      'updating',
+      'launching',
+      'playing',
+      'redist',
+      'winetricks',
+      'extracting',
+      'repairing',
+      'moving',
+      'syncing-saves',
+      'uninstalling'
+    ]
+
+    const pendingOps = libraryStatus.filter((game) =>
+      allowedPendingOps.includes(game.status)
     ).length
+    const playing =
+      libraryStatus.filter((game) => game.status === 'playing').length > 0
 
     if (pendingOps) {
-      window.api.lock()
+      window.api.lock(playing)
     } else {
       window.api.unlock()
     }
   }
 
+  addHelpItem = (helpItemId: string, helpItem: HelpItem) => {
+    this.setState((previous: StateProps) => {
+      const newItems = { ...previous.helpItems }
+      newItems[helpItemId] = helpItem
+      return { helpItems: newItems }
+    })
+  }
+
+  removeHelpItem = (helpItemId: string) => {
+    this.setState((previous: StateProps) => {
+      delete previous.helpItems[helpItemId]
+      return { helpItems: { ...previous.helpItems } }
+    })
+  }
+
   render() {
-    const isRTL = RTL_LANGUAGES.includes(this.state.language)
+    const {
+      showInstallModal,
+      language,
+      epic,
+      gog,
+      amazon,
+      favouriteGames,
+      customCategories,
+      hiddenGames,
+      settingsModalOpen,
+      hideChangelogsOnStartup,
+      lastChangelogShown,
+      libraryStatus
+    } = this.state
+    const isRTL = RTL_LANGUAGES.includes(language)
+
+    const installingEpicGame = libraryStatus.some(
+      (game) => game.status === 'installing' && game.runner === 'legendary'
+    )
 
     return (
       <ContextProvider.Provider
         value={{
           ...this.state,
           epic: {
-            library: this.state.epic.library,
-            username: this.state.epic.username,
+            library: epic.library,
+            username: epic.username,
             login: this.epicLogin,
             logout: this.epicLogout
           },
           gog: {
-            library: this.state.gog.library,
-            username: this.state.gog.username,
+            library: gog.library,
+            username: gog.username,
             login: this.gogLogin,
             logout: this.gogLogout
           },
-          handleCategory: this.handleCategory,
-          handleLayout: this.handleLayout,
-          handlePlatformFilter: this.handlePlatformFilter,
-          handleSearch: this.handleSearch,
+          amazon: {
+            library: amazon.library,
+            user_id: amazon.user_id,
+            username: amazon.username,
+            getLoginData: this.getAmazonLoginData,
+            login: this.amazonLogin,
+            logout: this.amazonLogout
+          },
+          installingEpicGame,
           setLanguage: this.setLanguage,
           isRTL,
           refresh: this.refresh,
           refreshLibrary: this.refreshLibrary,
           refreshWineVersionInfo: this.refreshWineVersionInfo,
           hiddenGames: {
-            list: this.state.hiddenGames,
+            list: hiddenGames,
             add: this.hideGame,
             remove: this.unhideGame
           },
-          setShowHidden: this.setShowHidden,
-          setShowFavourites: this.setShowFavourites,
-          setShowNonAvailable: this.setShowNonAvailable,
           favouriteGames: {
-            list: this.state.favouriteGames,
+            list: favouriteGames,
             add: this.addGameToFavourites,
             remove: this.removeGameFromFavourites
           },
+          customCategories: {
+            list: customCategories,
+            listCategories: this.getCustomCategories,
+            addToGame: this.addGameToCustomCategory,
+            removeFromGame: this.removeGameFromCustomCategory,
+            addCategory: this.setCustomCategory,
+            removeCategory: this.removeCustomCategory,
+            renameCategory: this.renameCustomCategory
+          },
           handleLibraryTopSection: this.handleLibraryTopSection,
+          handleExperimentalFeatures: this.handleExperimentalFeatures,
           setTheme: this.setTheme,
           setZoomPercent: this.setZoomPercent,
           setAllTilesInColor: this.setAllTilesInColor,
+          setTitlesAlwaysVisible: this.setTitlesAlwaysVisible,
           setSideBarCollapsed: this.setSideBarCollapsed,
           setPrimaryFontFamily: this.setPrimaryFontFamily,
           setSecondaryFontFamily: this.setSecondaryFontFamily,
           showDialogModal: this.handleShowDialogModal,
           showResetDialog: this.showResetDialog,
           handleExternalLinkDialog: this.handleExternalLinkDialog,
-          hideChangelogsOnStartup: this.state.hideChangelogsOnStartup,
+          hideChangelogsOnStartup: hideChangelogsOnStartup,
           setHideChangelogsOnStartup: this.setHideChangelogsOnStartup,
-          lastChangelogShown: this.state.lastChangelogShown,
+          lastChangelogShown: lastChangelogShown,
           setLastChangelogShown: this.setLastChangelogShown,
-          isSettingsModalOpen: this.state.settingsModalOpen,
-          setIsSettingsModalOpen: this.handleSettingsModalOpen
+          isSettingsModalOpen: settingsModalOpen,
+          setIsSettingsModalOpen: this.handleSettingsModalOpen,
+          setCurrentCustomCategories: this.setCurrentCustomCategories,
+          help: {
+            items: this.state.helpItems,
+            addHelpItem: this.addHelpItem,
+            removeHelpItem: this.removeHelpItem
+          },
+          setDisableDialogBackdropClose: this.setDisableDialogBackdropClose
         }}
       >
         {this.props.children}
+        {showInstallModal.show && (
+          <InstallModal
+            appName={showInstallModal.appName}
+            runner={showInstallModal.runner}
+            gameInfo={showInstallModal.gameInfo}
+            backdropClick={() =>
+              this.setState({
+                showInstallModal: { ...showInstallModal, show: false }
+              })
+            }
+          />
+        )}
       </ContextProvider.Provider>
     )
   }

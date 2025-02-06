@@ -1,13 +1,15 @@
 {
     "accessibility": {
-        "actions_font_family_no_default": "Actions Font Family (Default: ",
+        "actions_font_family_no_default": "Ενέργειες Οικογένεια γραμματοσειράς (προεπιλογή):",
         "all_tiles_in_color": "Εμφάνιση όλων των πλακιδίων παιχνιδιού με χρώμα",
         "content_font_family_no_default": "Content Font Family (Default: ",
         "fonts": "Γραμματοσειρές",
         "title": "Προσβασιμότητα",
-        "zoom": "Zoom"
+        "zoom": "Zoom",
+        "disable_dialog_backdrop_close": "Απενεργοποίηση του κλεισίματος διαλόγων κάνοντας κλικ στο εξωτερικό",
+        "titles_always_visible": "Εμφανίζει πάντα τίτλους στη βιβλιοθήκη"
     },
-    "add_game": "Add Game",
+    "add_game": "Προσθήκη παιχνιδιού",
     "All": "Όλα",
     "anticheat": {
         "anticheats": "Προστασία από cheats",
@@ -56,7 +58,7 @@
                 "title": "Ο φάκελος παιχνιδιού φαίνεται να έχει διαγραφεί, θέλετε να αφαιρέσετε το παιχνίδι από την λίστα εγκατεστημένων;"
             },
             "generic": {
-                "message": "",
+                "message": "γενικό μήνυμα σφάλματος",
                 "title": "Select EXE to Run"
             },
             "launchAborted": "Launch aborted",
@@ -78,7 +80,14 @@
                 "message": "Winetricks returned the following error during execution:{{newLine}}{{error}}",
                 "title": "Winetricks error"
             },
-            "moving": "Σφάλμα κατά τη μετακίνηση του παιχνιδιού {{error}}"
+            "moving": "Σφάλμα κατά τη μετακίνηση του παιχνιδιού {{error}}",
+            "ubisoft-connect": {
+                "message": "Η εγκατάσταση του Ubisoft Connect στο πρόθεμα του παιχνιδιού απέτυχε. Ελέγξτε τη σελίδα wiki μας στη διεύθυνση https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac για να την εγκαταστήσετε μη αυτόματα.",
+                "title": "Ubisoft Connect"
+            },
+            "legendary": {
+                "generic": "Παρουσιάστηκε σφάλμα! Δοκιμάστε να αποσυνδεθείτε και να συνδεθείτε στον λογαριασμό σας Epic. {{newline}} {{error}}"
+            }
         },
         "info": {
             "update": {
@@ -112,7 +121,8 @@
         },
         "select": {
             "button": "Επιλογή",
-            "exe": "Επιλογή αρχείου EXE"
+            "exe": "Επιλογή αρχείου EXE",
+            "script": "Επιλέξτε δέσμη ενεργειών ..."
         },
         "shortcuts": {
             "message": "Συντομεύσεις δημιουργήθηκαν στην Επιφάνεια Εργασίας και στο Μενού Έναρξης",
@@ -145,11 +155,26 @@
             "wine-change": {
                 "title": "Το κρασί δεν βρέθηκε!",
                 "message": "Δεν μπορέσαμε να βρούμε την επιλεγμένη έκδοση κρασιού για την κυκλοφορία αυτού του τίτλου ({{selectedWine}}). {{newline}} Βρήκαμε άλλο ένα, θέλετε να συνεχίσετε την εκκίνηση χρησιμοποιώντας το {{foundWine}};"
+            },
+            "sideload": {
+                "confirmExit": {
+                    "title": "Είστε σίγουροι πως θέλετε να κλείσετε;",
+                    "message": "Οποιαδήποτε μη αποθηκευμένη πρόοδος μπορεί να χαθεί"
+                }
+            },
+            "snap": {
+                "checkbox": "Μην εμφανίσετε ξανά αυτό το μήνυμα",
+                "title": "Το Heroic τρέχει ως Snap",
+                "message": "Ορισμένες λειτουργίες δεν είναι διαθέσιμες στην έκδοση Snap της εφαρμογής προς το παρόν και προσπαθούμε να τις διορθώσουμε.{{newLine}}Οι τρέχοντες περιορισμοί είναι: {{newLine}}}Το Heroic δεν θα είναι σε θέση να βρει το Proton από το Steam ή το Wine από το Lutris.{{newLine}}{{newLine}}{{newLine}}Τα Gamecope, GameMode και MangoHud δεν θα λειτουργούν επίσης, καθώς το Heroic δεν μπορεί να έχει πρόσβαση σε αυτά.{{newLine}}{{newLine}}{{newLine}}Για να έχετε πρόσβαση σε αυτό το χαρακτηριστικό, παρακαλούμε εγκαταστήστε το Heroic ως Flatpak, DEB ή από το AppImage."
             }
         },
         "wineprefix": "Διαλέξτε τον φάκελο Προθέματος Wine",
         "yes": "ΝΑΙ",
-        "dontShowAgain": "Μην εμφανιστείτε ξανά"
+        "dontShowAgain": "Μην εμφανιστεί ξανά",
+        "choose-nile-binary": "Επιλέξτε Nile binary",
+        "update": "Ενημέρωση",
+        "postpone": "Αναβολή",
+        "changelog": "Αρχείο Αλλαγών"
     },
     "button": {
         "cancel": "Cancel",
@@ -197,7 +222,8 @@
             "start-time": "Started at",
             "type": "Type"
         },
-        "title": "Downloads"
+        "title": "Downloads",
+        "ETA": "Αναμενόμενη ώρα"
     },
     "epic": {
         "offline-notification-body": "Οι διαδικτυακές υπηρεσίες πιθανό να μη λειτουργούν πλήρως καθώς οι διακομιστές Epic Games ειναι εκτός σύνδεσης!",
@@ -209,7 +235,8 @@
     "game": {
         "status": "Κατάσταση",
         "store": "Κατάστημα",
-        "title": "Τίτλος παιχνιδιού"
+        "title": "Τίτλος παιχνιδιού",
+        "modify": "Τροποποίηση Εγκατάστασης"
     },
     "generic": {
         "error": {
@@ -230,7 +257,8 @@
         "show_available_games": "Show non-Available games",
         "show_favourites_only": "Εμφάνιση μόνο αγαπημένων",
         "show_hidden": "Εμφάνιση κρυφών στοιχείων",
-        "store": "Φιλτράρισμα καταστήματος"
+        "store": "Φιλτράρισμα καταστήματος",
+        "categories": "Κατηγορίες"
     },
     "help": {
         "amdfsr": "Το FSR της AMD συμβάλλει στην ενίσχυση του ρυθμού καρέ αναβαθμίζοντας χαμηλότερες αναλύσεις σε λειτουργία πλήρους οθόνης. Η ποιότητα της εικόνας αυξάνεται από 5 σε 1 με το κόστος μιας μικρής μείωσης της απόδοσης. Η ενεργοποίηση μπορεί να βελτιώσει την απόδοση.",
@@ -270,7 +298,16 @@
         "wine": {
             "part1": "Το Heroic αναζητά εκδόσεις Wine, Proton και CrossOver στους ακόλουθους φακέλους:",
             "part2": "Για άλλες τοποθεσίες, χρησιμοποιήστε έναν συμβολικό σύνδεσμο σε έναν απ' αυτούς τους φακέλους"
-        }
+        },
+        "disable_logs": "Ενεργοποιήστε αυτό το πλαίσιο ελέγχου για να απενεργοποιήσετε τις περισσότερες εγγραφές σε αρχεία καταγραφής (οι κρίσιμες πληροφορίες καταγράφονται πάντα). Βεβαιωθείτε ότι έχετε απενεργοποιήσει αυτήν τη ρύθμιση πριν αναφέρετε οποιοδήποτε πρόβλημα.",
+        "title": {
+            "accessibility": "Προσβασιμότητα",
+            "login": "Login",
+            "downloadManager": "Download Manager",
+            "wineManager": "Διαχειριστής Wine",
+            "library": "Συλλογή"
+        },
+        "msync": "Το Fsync στοχεύει να μειώσει το κόστος του wineserver σε παιχνίδια που χρησιμοποιούν εντατικά τη CPU. Η ενεργοποίηση μπορεί να βελτιώσει την απόδοση σε υποστηριζόμενους πυρήνες Linux."
     },
     "info": {
         "heroic": {
@@ -297,13 +334,15 @@
         "wine-repfix": {
             "message": "Wine uses what is called a WINEPREFIX to encapsulate Windows applications. This prefix contains the Wine configuration files and a reproduction of the file hierarchy of C: (the main disk on a Windows OS). In this reproduction of the C: drive, your game save files and dependencies installed via winetricks are stored."
         },
-        "wine-path-invalid": "Το Wine Path δεν είναι έγκυρο, επιλέξτε άλλο."
+        "wine-path-invalid": "Το Wine Path δεν είναι έγκυρο, επιλέξτε άλλο.",
+        "wine-path-none-found": "Δεν βρέθηκε έκδοση Wine, κατεβάστε μία από το Wine Manager"
     },
     "install": {
         "path": "Επιλέξτε διαδρομή εγκατάστασης"
     },
     "label": {
-        "loading": "Loading"
+        "loading": "Loading",
+        "releaseDate": "Ημερομηνία κυκλοφορίας"
     },
     "library": {
         "refresh": "Ανανέωση",
@@ -324,7 +363,8 @@
         "alternative_method": "Alternative Login Method",
         "epic": "Epic Games Login",
         "gog": "GOG Login",
-        "message": "Login with your platform. You can login to more than one platform at the same time."
+        "message": "Login with your platform. You can login to more than one platform at the same time.",
+        "amazon": "Είσοδος Amazon"
     },
     "message": {
         "sync": "Ο συγχρονισμός ολοκληρώθηκε",
@@ -357,7 +397,9 @@
             "error": "Αποτυχημένη Εγκατάσταση",
             "finished": "Η εγκατάσταση ολοκληρώθηκε",
             "imported": "Το παιχνίδι εισάχθηκε",
-            "startInstall": "Η Εγκατάσταση έχει ξεκινήσει"
+            "startInstall": "Η Εγκατάσταση έχει ξεκινήσει",
+            "failed": "Αποτυχημένη Εγκατάσταση",
+            "paused": "Εγκατάσταση σε παύση"
         },
         "moved": "Η μετακίνηση ολοκληρώθηκε",
         "moving": "Μετακίνηση παιχνιδιού",
@@ -369,7 +411,9 @@
         "update": {
             "canceled": "Η ενημέρωση ακυρώθηκε",
             "finished": "Η ενημέρωση ολοκληρώθηκε",
-            "started": "Έναρξη Ενημέρωσης"
+            "started": "Έναρξη Ενημέρωσης",
+            "failed": "Ενημέρωση απέτυχε",
+            "paused": "Η ενημέρωση τέθηκε σε παύση"
         }
     },
     "offline-message": {
@@ -379,7 +423,7 @@
         "offline-retry-in": "Offline. Retrying in {{seconds}} seconds.",
         "retrying": "Retrying"
     },
-    "Open": "",
+    "Open": "Ανοιξε",
     "options": {
         "advanced": {
             "key": "Variable Name",
@@ -414,21 +458,24 @@
     "other": {
         "gogdl-version": "Έκδοση GOGDL: ",
         "legendary-version": "Έκδοση Legendary: ",
-        "weblate": "Βοηθήστε να μεταφραστεί το Heroic."
+        "weblate": "Βοηθήστε να μεταφραστεί το Heroic.",
+        "nile-version": "Έκδοση Nile: "
     },
     "Other": "Other",
     "placeholder": {
         "alt-gogdl-bin": "Χρήση ενσωματωμένου δυαδικού αρχείου GOGDL...",
         "alt-legendary-bin": "Χρήση ενσωματωμένου δυαδικού αρχείου Legendary...",
         "custom_themes_path": "Select the path to look for custom CSS files",
-        "dxvkfpsvalue": "Postive integer value (e.g. 30, 60, ...)",
+        "dxvkfpsvalue": "Positive integer value (e.g. 30, 60, ...)",
         "egs-prefix": "Πρόθημα διαδρομής εγκατάστασης EGS",
-        "prefered_language": "2-char code (i.e.: \"en\" or \"fr\")"
+        "prefered_language": "2-char code (i.e.: \"en\" or \"fr\")",
+        "alt-nile-bin": "Χρησιμοποιώντας το ενσωματωμένο δυαδικό σύστημα Nile..."
     },
     "platforms": {
         "linux": "Linux",
         "mac": "Mac",
-        "win": "Windows"
+        "win": "Windows",
+        "browser": "Πρόγραμμα περιήγησης"
     },
     "please-wait": "Please wait...",
     "progress": "Progress",
@@ -440,7 +487,9 @@
             "empty": "Nothing to download",
             "finished": "Completed",
             "queued": "Queued",
-            "remove": "Remove from Downloads"
+            "remove": "Remove from Downloads",
+            "pause": "Παύση λήψης",
+            "resume": "Συνέχιση λήψης"
         }
     },
     "Recent": "Παίχτηκε Πρόσφατα",
@@ -506,11 +555,14 @@
         "log": {
             "copy-to-clipboard": "Αντιγραφή αρχείου καταγραφής στο πρόχειρο",
             "current-log": "Τρέχων Αρχείο Καταγραφής",
-            "instructions": "Join our Discord and look for the channel that matches your operating system. Share the content of the logs displayed here, and include a clear description of the problem with any relevant information and details.",
+            "instructions": "Join our Discord and look for the \"#-support\" section. Read the pinned \"Read Me First | Frequently Asked Questions\" thread and follow the instructions to share these logs and any relevant information about your problem.",
             "instructions_title": "How to report a problem?",
             "last-log": "Τελευταίο Αρχείο Καταγραφής",
             "no-file": "Δεν βρέθηκε αρχείο σύνδεσης",
-            "show-in-folder": "Εμφάνιση αρχείου καταγραφής στον φάκελο"
+            "show-in-folder": "Εμφάνιση αρχείου καταγραφής στον φάκελο",
+            "upload": {
+                "actions": "Ενέργεια"
+            }
         },
         "mangohud": "Ενεργοποίηση Mangohud (απαραίτητη η εγκατάσταση του Mangohud)",
         "manualsync": {
@@ -552,7 +604,13 @@
         "wineprefix": "Φάκελος Προθημάτων Wine",
         "wineversion": "Έκδοση Wine",
         "autoUpdateGames": "Αυτόματη ενημέρωση παιχνιδιών",
-        "ignoreGameUpdates": "Αγνοήστε τις ενημερώσεις του παιχνιδιού"
+        "ignoreGameUpdates": "Αγνοήστε τις ενημερώσεις του παιχνιδιού",
+        "disable_logs": "Απενεργοποίηση αρχείων καταγραφής",
+        "addgamestoapplications": "Προσθέστε αυτόματα παιχνίδια στις Εφαρμογές",
+        "showMetalOverlay": "Εμφάνιση επικάλυψης στατιστικών",
+        "alt-nile-bin": "Επιλέξτε ένα εναλλακτικό δυαδικό αρχείο Nile",
+        "autodxvknvapi": "Αυτόματη Εγκατάσταση/Ενημέρωση DXVK-NVAPI με Πρόθημα",
+        "msync": "Ενεργοποίηση Esync"
     },
     "settings": {
         "battlEyeRuntime": {
@@ -594,6 +652,19 @@
         "saves": {
             "label": "Save Location:",
             "warning": "Η λειτουργία Cloud Saves είναι σε Beta, δημιουργήστε αντίγραφα ασφαλείας των αποθηκευμένων παιχνιδιών σας πριν από τον συγχρονισμό (σε περίπτωση που κάτι πάει στραβά)"
+        },
+        "advanced": {
+            "clearCache": {
+                "help8": "Εγκατεστημένα Παιχνίδια",
+                "help9": "Ρυθμίσεις παιχνιδιού"
+            },
+            "details": "Λεπτομέριες",
+            "title": {
+                "resetHeroic": "Επαναφορά Heroic"
+            },
+            "resetHeroic": {
+                "help": "Είστε σίγουροι ότι θέλετε να επαναφέρετε το Heroic? Αυτό θα αφαιρέσαι όλες τις Ρυθμίσεις και την προσωρινή μνήμη, αλλά δεν θα αφαιρέσει τα εγκατεστημένα παιχνίδια ή τις πληροφορίες εισόδου του Epic. Οι φορητές εκδόσεις (AppImage, WinPortable, ...) του heroic θα πρέπει να επανεκκινηθούν χειροκίνητα."
+            }
         }
     },
     "Settings": "Ρυθμίσεις",
@@ -604,7 +675,8 @@
     "status": {
         "installing": "Εγκατάσταση",
         "logging": "Σύνδεση...",
-        "processing": "Επεξεργασία αρχείων, παρακαλώ περιμένετε"
+        "processing": "Επεξεργασία αρχείων, παρακαλώ περιμένετε",
+        "preparing_login": "Προετοιμασία σύνδεσης... "
     },
     "store": "Κατάστημα Epic",
     "stores": "Καταστήματα",
@@ -630,7 +702,7 @@
     "two_col_table": {
         "save_hint": "Changes in this table are not saved automatically. Click the + button"
     },
-    "Update Available!": "",
+    "Update Available!": "Ενημέρωση διαθέσιμη!",
     "userselector": {
         "discord": "Discord",
         "logging_out": "Logging out",
@@ -666,5 +738,51 @@
     },
     "wiki_info": {
         "not_found": "Δεν μπορέσαμε να βρούμε επιπλέον πληροφορίες."
+    },
+    "dlc": {
+        "size": "Μέγεθος",
+        "actions": "Ενέργειες",
+        "installDlcs": "Εγκατάσταση όλων των DLCs",
+        "noDlcFound": "Δεν βρέθηκαν DLC",
+        "title": "Title"
+    },
+    "amazon": "Αμαζόνα",
+    "Amazon Games": "Παιχνίδια Amazon",
+    "prime-gaming": "Prime Gaming",
+    "winetricks": {
+        "install": "Εγκατάσταση",
+        "loading": "Loading"
+    },
+    "category-settings": {
+        "cancel": "Ακύρωση",
+        "warning": "Προειδοποίηση",
+        "add-new-category": "Προσθήκη νέας κατηγορίας",
+        "remove-category": "Αφαίρεση κατηγορίας",
+        "delete-question": "Η διαδικασία θα αφαιρέσει μόνιμα αυτή την κατηγορία και θα την αποβάλει από όλα τα παιχνίδια. Συνεχίστε;",
+        "new-category": "Νέα κατηγορία"
+    },
+    "adtraction-locked": {
+        "description": "Φαίνεται οτί το track.adtrastion.com domain δεν μπορούσε να φορτώσει ή είναι μπλοκαρισμένο. Με το adtraction, ότι αγορές κανετε στο GOG Store υποστειρίζεται το Heroic οικονομικά. Σκεφτείτε να αφερέσετε το block εάν θέλετε να υποστειρίξεται.",
+        "dont-show-again": "Μην δείξετε την προειδοποίηση ξανά",
+        "title": "Adtraction είναι μπλοκαρισμένο"
+    },
+    "categories-manager": {
+        "add": "Προσθήκη",
+        "add-placeholder": "Προσθήκη νέας κατηγορίας",
+        "confirm-remove": "Επιβεβαίωση της αφαίρεσης \"{{name}}\"",
+        "confirm-rename": "Επιβεβαίωση της μετονομασίας του «{{oldName}}» σε «{{newName}}»",
+        "no-categories": "Δεν υπάρχουν ακόμα κατηγορίες.",
+        "remove": "Αφαιρέστε \"{{name}}\"",
+        "cancel-remove": "Ακύρωση αφαίρεσης του «{{name}}»",
+        "cancel-rename": "Ακύρωση μετονομασίας του «{{name}}»",
+        "rename": "Μετονομασία «{{name}}»",
+        "title": "Διαχείριση κατηγοριών"
+    },
+    "emptyLibrary": {
+        "noGames": "Η βιβλιοθήκη σου είναι άδεια. Μπορείτε να <1>Συνδεθείτε</1> χρησιμοποιώντας ένα κατάστημα ή κλικ <3></3> για να προσθέσετε ένα με μη αυτόματο τρόπο.",
+        "noResults": "Τα τρέχοντα φίλτρα δεν παρήγαγαν κανένα αποτέλεσμα."
+    },
+    "window": {
+        "close": "Kλείσιμο"
     }
 }

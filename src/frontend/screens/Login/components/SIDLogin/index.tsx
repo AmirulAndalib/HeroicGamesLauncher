@@ -1,5 +1,8 @@
 import React, { useContext, useState } from 'react'
 import Info from '@mui/icons-material/Info'
+import LinkIcon from '@mui/icons-material/Link'
+import PublicIcon from '@mui/icons-material/Public'
+import { Button, Paper, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { loginPage, sidInfoPage } from 'frontend/helpers'
 import './index.css'
@@ -11,36 +14,58 @@ interface Props {
 }
 
 export default function SIDLogin({ backdropClick }: Props) {
+  const epicLoginUrl = 'https://legendary.gl/epiclogin'
+
   const { epic } = useContext(ContextProvider)
   const { t } = useTranslation('login')
   const [input, setInput] = useState('')
   const [status, setStatus] = useState({
     loading: false,
-    message: ''
+    error: false
   })
+  const [linkCopied, setLinkCopied] = useState(false)
 
-  const { loading, message } = status
+  const { loading, error } = status
+
+  const handleCopyLink = () => {
+    window.api.clipboardWriteText(epicLoginUrl)
+    setLinkCopied(true)
+  }
 
   const handleLogin = async (sid: string) => {
+    window.api.logInfo('Called Epic Login')
+    setStatus({
+      loading: true,
+      error: false
+    })
     await epic.login(sid).then(async (res) => {
-      setStatus({
-        loading: true,
-        message: t('status.loading', 'Loading Game list, please wait')
-      })
-      window.api.logInfo('Called Login')
       console.log(res)
       if (res === 'done') {
         await window.api.getUserInfo()
-        setStatus({ loading: false, message: '' })
+        setStatus({ loading: false, error: false })
         backdropClick()
       } else {
-        setStatus({ loading: true, message: t('status.error', 'Error') })
+        setStatus({
+          loading: false,
+          error: true
+        })
         setTimeout(() => {
-          setStatus({ ...status, loading: false })
+          setStatus({ loading: false, error: false })
         }, 2500)
       }
     })
   }
+
+  function getButtonLabel() {
+    if (loading) {
+      return t('button.loading', 'Loading')
+    } else if (error) {
+      return t('button.error', 'Error, try a different Code')
+    } else {
+      return t('button.login', 'Login')
+    }
+  }
+
   return (
     <div className="SIDLoginModal">
       <span className="backdrop" onClick={backdropClick}></span>
@@ -67,6 +92,33 @@ export default function SIDLogin({ backdropClick }: Props) {
                   className="material-icons"
                 />
               </span>
+              <Paper variant="outlined" className="login-link">
+                <Typography variant="subtitle1" paddingLeft={2}>
+                  {epicLoginUrl}
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    className={
+                      linkCopied ? 'icon-button-success' : 'icon-button'
+                    }
+                    onClick={handleCopyLink}
+                    endIcon={<LinkIcon fontSize="small" />}
+                    variant="outlined"
+                    size="small"
+                  >
+                    {linkCopied ? t('button.copied') : t('button.copy')}
+                  </Button>
+                  <Button
+                    className="icon-button"
+                    endIcon={<PublicIcon fontSize="small" />}
+                    onClick={() => loginPage()}
+                    size="small"
+                    variant="outlined"
+                  >
+                    {t('button.open')}
+                  </Button>
+                </Stack>
+              </Paper>
             </li>
             <li>
               {`${t('message.part6')} `}
@@ -89,16 +141,15 @@ export default function SIDLogin({ backdropClick }: Props) {
         />
         {loading && (
           <p className="message">
-            {message}
-            <Autorenew className="material-icons" />{' '}
+            <Autorenew className="material-icons refreshing" />{' '}
           </p>
         )}
         <button
           onClick={async () => handleLogin(input)}
           className="button is-primary"
-          disabled={loading || input.length < 30}
+          disabled={loading || input.length < 30 || error}
         >
-          {t('button.login', 'Login')}
+          {getButtonLabel()}
         </button>
       </div>
     </div>

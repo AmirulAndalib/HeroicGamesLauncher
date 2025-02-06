@@ -1,9 +1,10 @@
-import * as axios from 'axios'
+import { logWarning, LogPrefix, logError } from 'backend/logger/logger'
 import * as crypto from 'crypto'
 import {
   existsSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync
 } from 'graceful-fs'
@@ -14,16 +15,18 @@ import {
   PROTON_URL,
   WINELUTRIS_URL,
   WINECROSSOVER_URL,
-  WINESTAGINGMACOS_URL
+  WINESTAGINGMACOS_URL,
+  GPTK_URL
 } from './constants'
-import { VersionInfo, Repositorys, State, ProgressInfo } from 'common/types'
+import { VersionInfo, Repositorys, WineVersionInfo } from 'common/types'
 import {
-  downloadFile,
   fetchReleases,
   getFolderSize,
   unlinkFile,
   unzipFile
 } from './utilities'
+import { axiosClient, calculateEta, downloadFile } from 'backend/utils'
+import type { WineManagerStatus } from 'common/types'
 
 interface getVersionsProps {
   repositorys?: Repositorys[]
@@ -45,6 +48,7 @@ async function getAvailableVersions({
   count = 100
 }: getVersionsProps): Promise<VersionInfo[]> {
   const releases: Array<VersionInfo> = []
+
   for await (const repo of repositorys) {
     switch (repo) {
       case Repositorys.WINEGE: {
@@ -57,21 +61,21 @@ async function getAvailableVersions({
             releases.push(...fetchedReleases)
           })
           .catch((error: Error) => {
-            throw error
+            logError(error, LogPrefix.WineDownloader)
           })
         break
       }
       case Repositorys.PROTONGE: {
         await fetchReleases({
           url: PROTONGE_URL,
-          type: 'Proton-GE',
+          type: 'GE-Proton',
           count: count
         })
           .then((fetchedReleases: VersionInfo[]) => {
             releases.push(...fetchedReleases)
           })
           .catch((error: Error) => {
-            throw error
+            logError(error, LogPrefix.WineDownloader)
           })
         break
       }
@@ -85,7 +89,7 @@ async function getAvailableVersions({
             releases.push(...fetchedReleases)
           })
           .catch((error: Error) => {
-            throw error
+            logError(error, LogPrefix.WineDownloader)
           })
         break
       }
@@ -99,7 +103,7 @@ async function getAvailableVersions({
             releases.push(...fetchedReleases)
           })
           .catch((error: Error) => {
-            throw error
+            logError(error, LogPrefix.WineDownloader)
           })
         break
       }
@@ -113,7 +117,7 @@ async function getAvailableVersions({
             releases.push(...fetchedReleases)
           })
           .catch((error: Error) => {
-            throw error
+            logError(error, LogPrefix.WineDownloader)
           })
         break
       }
@@ -127,33 +131,49 @@ async function getAvailableVersions({
             releases.push(...fetchedReleases)
           })
           .catch((error: Error) => {
-            throw error
+            logError(error, LogPrefix.WineDownloader)
+          })
+        break
+      }
+      case Repositorys.GPTK: {
+        await fetchReleases({
+          url: GPTK_URL,
+          type: 'Game-Porting-Toolkit',
+          count: count
+        })
+          .then((fetchedReleases: VersionInfo[]) => {
+            releases.push(...fetchedReleases)
+          })
+          .catch((error: Error) => {
+            logError(error, LogPrefix.WineDownloader)
           })
         break
       }
       default: {
-        console.warn(
-          `Unknown and not supported repository key passed! Skip fetch for ${repo}`
+        logWarning(
+          `Unknown and not supported repository key passed! Skip fetch for ${repo}`,
+          LogPrefix.WineDownloader
         )
         break
       }
     }
   }
+
   return releases
 }
 
 interface installProps {
-  versionInfo: VersionInfo
+  versionInfo: WineVersionInfo
   installDir: string
   overwrite?: boolean
-  onProgress?: (state: State, progress?: ProgressInfo) => void
+  onProgress?: (state: WineManagerStatus) => void
   abortSignal?: AbortSignal
 }
 
 /**
  * Installs a given version to the given installation directory.
  *
- * @param versionInfo the version to install as {@link VersionInfo}
+ * @param versionInfo the version to install
  * @param installDir absolute path to installation directory
  * @param overwrite allow overwriting existing version installation
  * @defaultValue false
@@ -178,10 +198,11 @@ async function installVersion({
 
   const tarFile =
     installDir + '/' + versionInfo.download.split('/').slice(-1)[0]
-  const installSubDir = installDir + '/' + versionInfo.version
+  const installSubDir =
+    versionInfo.installDir ?? installDir + '/' + versionInfo.version
   const sourceChecksum = versionInfo.checksum
     ? (
-        await axios.default.get(versionInfo.checksum, {
+        await axiosClient.get(versionInfo.checksum, {
           responseType: 'text'
         })
       ).data
@@ -206,7 +227,7 @@ async function installVersion({
 
   // Check if installDir exist
   if (!existsSync(installDir)) {
-    throw new Error(`Installation directory ${installDir} does not exist!`)
+    mkdirSync(installDir, { recursive: true })
   } else if (!statSync(installDir).isDirectory()) {
     throw new Error(`Installation directory ${installDir} is not a directory!`)
   }
@@ -218,8 +239,11 @@ async function installVersion({
 
   // Check if it already exist
   if (existsSync(installSubDir) && !overwrite) {
-    console.warn(`${versionInfo.version} is already installed. Skip installing! \n
-      Consider using 'override: true if you wan't to override it!'`)
+    logWarning(
+      `${versionInfo.version} is already installed. Skip installing! \n
+      Consider using 'override: true if you wan't to override it!'`,
+      LogPrefix.WineDownloader
+    )
 
     // resolve with disksize
     versionInfo.disksize = getFolderSize(installSubDir)
@@ -229,15 +253,33 @@ async function installVersion({
   // remove tarFile if still exist
   unlinkFile(tarFile)
 
+  const getProgress = (
+    downloadedBytes: number,
+    downloadSpeed: number,
+    percentage: number
+  ) => {
+    const eta = calculateEta(
+      downloadedBytes,
+      downloadSpeed,
+      versionInfo.downsize
+    )
+
+    onProgress({
+      status: 'downloading',
+      percentage,
+      eta: eta!,
+      avgSpeed: downloadSpeed
+    })
+  }
+
   // Download
   await downloadFile({
     url: versionInfo.download,
-    downloadDir: installDir,
-    downsize: versionInfo.downsize,
-    onProgress: onProgress,
-    abortSignal: abortSignal
-  }).catch((error: string) => {
-    if (error.includes('AbortError')) {
+    dest: installDir,
+    progressCallback: getProgress,
+    abortSignal
+  }).catch((error: Error) => {
+    if (error instanceof Error && error.message.includes('Download stopped')) {
       abortHandler()
     }
 
@@ -259,12 +301,17 @@ async function installVersion({
       throw new Error('Checksum verification failed')
     }
   } else {
-    console.warn(
-      `No checksum provided. Download of ${versionInfo.version} could be invalid!`
+    logWarning(
+      `No checksum provided. Download of ${versionInfo.version} could be invalid!`,
+      LogPrefix.WineDownloader
     )
   }
 
-  // Unzip
+  // backup old folder
+  if (overwrite) {
+    renameSync(installSubDir, `${installSubDir}_backup`)
+  }
+
   try {
     mkdirSync(installSubDir)
   } catch (error) {
@@ -272,6 +319,7 @@ async function installVersion({
     throw new Error(`Failed to make folder ${installSubDir} with:\n ${error}`)
   }
 
+  // Unzip
   await unzipFile({
     filePath: tarFile,
     unzipDir: installSubDir,
@@ -283,14 +331,24 @@ async function installVersion({
       abortHandler()
     }
 
+    // remove artefacts
     rmSync(installSubDir, { recursive: true })
     unlinkFile(tarFile)
+
+    // restore backup
+    if (overwrite) {
+      renameSync(`${installSubDir}_backup`, installSubDir)
+    }
+
     throw new Error(
       `Unzip of ${tarFile.split('/').slice(-1)[0]} failed with:\n ${error}`
     )
   })
 
   // clean up
+  if (overwrite) {
+    rmSync(`${installSubDir}_backup`, { recursive: true })
+  }
   unlinkFile(tarFile)
 
   // resolve with disksize

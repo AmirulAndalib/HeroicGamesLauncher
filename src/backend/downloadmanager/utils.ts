@@ -1,13 +1,21 @@
-import { logError, logInfo, LogPrefix, logWarning } from '../logger/logger'
-import { getGame, isEpicServiceOffline } from '../utils'
-import { InstallParams } from 'common/types'
+import { gameManagerMap } from 'backend/storeManagers'
+import { logError, LogPrefix, logWarning } from '../logger/logger'
+import {
+  downloadFile,
+  isEpicServiceOffline,
+  sendGameStatusUpdate
+} from '../utils'
+import { DMStatus, InstallParams, Runner } from 'common/types'
 import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { isOnline } from '../online_monitor'
-import { sendFrontendMessage } from '../main_window'
+import { fixesPath, gogdlConfigPath, isWindows } from 'backend/constants'
+import pathModule from 'path'
+import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
+import { storeMap } from 'common/utils'
 
 async function installQueueElement(params: InstallParams): Promise<{
-  status: 'done' | 'error' | 'abort'
+  status: DMStatus
   error?: string | undefined
 }> {
   const {
@@ -17,10 +25,11 @@ async function installQueueElement(params: InstallParams): Promise<{
     sdlList = [],
     runner,
     installLanguage,
-    platformToInstall
+    platformToInstall,
+    build,
+    branch
   } = params
-  const game = getGame(appName, runner)
-  const { title } = game.getGameInfo()
+  const { title } = gameManagerMap[runner].getGameInfo(appName)
 
   if (!isOnline()) {
     logWarning(
@@ -45,7 +54,14 @@ async function installQueueElement(params: InstallParams): Promise<{
     }
   }
 
-  sendFrontendMessage('gameStatusUpdate', {
+  if (runner === 'gog') {
+    // Sometimes, a game manifest file already exists and that makes the installation
+    // end as soon as it's started. We have to delete the file to prevent that issue.
+    const manifestPath = pathModule.join(gogdlConfigPath, 'manifests', appName)
+    if (existsSync(manifestPath)) rmSync(manifestPath)
+  }
+
+  sendGameStatusUpdate({
     appName,
     runner,
     status: 'installing',
@@ -59,68 +75,49 @@ async function installQueueElement(params: InstallParams): Promise<{
 
   const errorMessage = (error: string) => {
     logError(
-      ['Installing of', params.appName, 'failed with:', error],
+      ['Installation of', params.appName, 'failed with:', error],
       LogPrefix.DownloadManager
     )
-
-    sendFrontendMessage('gameStatusUpdate', {
-      appName,
-      runner,
-      status: 'done'
-    })
-    return error
   }
 
   try {
-    const { status, error } = await game.install({
-      path: path.replaceAll("'", ''),
-      installDlcs,
-      sdlList,
-      platformToInstall,
-      installLanguage
-    })
-
-    if (status === 'abort') {
-      logWarning(
-        ['Installing of', params.appName, 'aborted!'],
-        LogPrefix.DownloadManager
-      )
-      notify({ title, body: i18next.t('notify.install.canceled') })
-    } else if (status === 'done') {
-      notify({
-        title,
-        body: i18next.t('notify.install.finished')
-      })
-
-      logInfo(
-        ['Finished installing of', params.appName],
-        LogPrefix.DownloadManager
-      )
-    } else if (status === 'error') {
-      errorMessage(error ?? '')
-      return { status: 'error' }
+    if (!isWindows) {
+      downloadFixesFor(appName, runner)
     }
 
-    sendFrontendMessage('gameStatusUpdate', {
-      appName,
-      runner,
-      status: 'done'
+    const { status, error } = await gameManagerMap[runner].install(appName, {
+      path: path.replaceAll("'", ''),
+      installDlcs,
+      sdlList: sdlList.filter((el) => el !== ''),
+      platformToInstall,
+      installLanguage,
+      build,
+      branch
     })
+
+    if (status === 'error') {
+      errorMessage(error ?? '')
+    }
 
     return { status }
   } catch (error) {
     errorMessage(`${error}`)
     return { status: 'error' }
+  } finally {
+    sendGameStatusUpdate({
+      appName,
+      runner,
+      status: 'done'
+    })
   }
 }
 
 async function updateQueueElement(params: InstallParams): Promise<{
-  status: 'done' | 'error'
+  status: DMStatus
   error?: string | undefined
 }> {
   const { appName, runner } = params
-  const game = getGame(appName, runner)
-  const { title } = game.getGameInfo()
+  const { title } = gameManagerMap[runner].getGameInfo(appName)
 
   if (!isOnline()) {
     logWarning(
@@ -145,7 +142,7 @@ async function updateQueueElement(params: InstallParams): Promise<{
     }
   }
 
-  sendFrontendMessage('gameStatusUpdate', {
+  sendGameStatusUpdate({
     appName,
     runner,
     status: 'updating'
@@ -156,41 +153,46 @@ async function updateQueueElement(params: InstallParams): Promise<{
     body: i18next.t('notify.update.started', 'Update Started')
   })
 
-  try {
-    const { status } = await game.update()
-
-    if (status === 'error') {
-      logWarning(
-        ['Updating of', params.appName, 'aborted!'],
-        LogPrefix.DownloadManager
-      )
-      notify({ title, body: i18next.t('notify.update.canceled') })
-    } else if (status === 'done') {
-      notify({
-        title,
-        body: i18next.t('notify.update.finished')
-      })
-
-      logInfo(
-        ['Finished updating of', params.appName],
-        LogPrefix.DownloadManager
-      )
-    }
-    return { status: 'done' }
-  } catch (error) {
+  const errorMessage = (error: string) => {
     logError(
-      ['Updating of', params.appName, 'failed with:', error],
+      ['Update of', params.appName, 'failed with:', error],
       LogPrefix.DownloadManager
     )
+  }
 
-    sendFrontendMessage('gameStatusUpdate', {
+  try {
+    const { status } = await gameManagerMap[runner].update(appName, {
+      build: params.build,
+      branch: params.branch,
+      language: params.installLanguage,
+      dlcs: params.installDlcs,
+      dependencies: params.dependencies
+    })
+
+    if (status === 'error') {
+      errorMessage('')
+    }
+
+    return { status }
+  } catch (error) {
+    errorMessage(`${error}`)
+    return { status: 'error' }
+  } finally {
+    sendGameStatusUpdate({
       appName,
       runner,
       status: 'done'
     })
-
-    return { status: 'error' }
   }
+}
+
+async function downloadFixesFor(appName: string, runner: Runner) {
+  const url = `https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/${storeMap[runner]}/${appName}-${storeMap[runner]}.json`
+  const dest = pathModule.join(fixesPath, `${appName}-${storeMap[runner]}.json`)
+  if (!existsSync(fixesPath)) {
+    mkdirSync(fixesPath, { recursive: true })
+  }
+  downloadFile({ url, dest, ignoreFailure: true })
 }
 
 export { installQueueElement, updateQueueElement }

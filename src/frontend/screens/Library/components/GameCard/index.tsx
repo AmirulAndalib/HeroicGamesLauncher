@@ -11,19 +11,13 @@ import React, {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faRepeat, faBan } from '@fortawesome/free-solid-svg-icons'
 
-import { ReactComponent as DownIcon } from 'frontend/assets/down-icon.svg'
-import {
-  FavouriteGame,
-  GameInfo,
-  HiddenGame,
-  Runner,
-  SideloadGame
-} from 'common/types'
+import DownIcon from 'frontend/assets/down-icon.svg?react'
+import { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
 import { Link, useNavigate } from 'react-router-dom'
-import { ReactComponent as PlayIcon } from 'frontend/assets/play-icon.svg'
-import { ReactComponent as SettingsIcon } from 'frontend/assets/settings_icon_alt.svg'
-import { ReactComponent as StopIcon } from 'frontend/assets/stop-icon.svg'
-import { ReactComponent as StopIconAlt } from 'frontend/assets/stop-icon-alt.svg'
+import PlayIcon from 'frontend/assets/play-icon.svg?react'
+import SettingsIcon from 'frontend/assets/settings_icon_alt.svg?react'
+import StopIcon from 'frontend/assets/stop-icon.svg?react'
+import StopIconAlt from 'frontend/assets/stop-icon-alt.svg?react'
 import {
   getGameInfo,
   getProgress,
@@ -45,12 +39,15 @@ import StoreLogos from 'frontend/components/UI/StoreLogos'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 import { getCardStatus, getImageFormatting } from './constants'
 import { hasStatus } from 'frontend/hooks/hasStatus'
+import fallBackImage from 'frontend/assets/heroic_card.jpg'
+import LibraryContext from '../../LibraryContext'
 
 interface Card {
   buttonClick: () => void
   hasUpdate: boolean
   isRecent: boolean
-  gameInfo: GameInfo | SideloadGame
+  justPlayed: boolean
+  gameInfo: GameInfo
   forceCard?: boolean
 }
 
@@ -61,11 +58,28 @@ const GameCard = ({
   buttonClick,
   forceCard,
   isRecent = false,
+  justPlayed = false,
   gameInfo: gameInfoFromProps
 }: Card) => {
-  const [gameInfo, setGameInfo] = useState<GameInfo | SideloadGame>(
-    gameInfoFromProps
-  )
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    // render an empty div until the card enters the viewport
+    // check GameList for the other side of this detection
+    const callback = (e: CustomEvent<{ appNames: string[] }>) => {
+      if (e.detail.appNames.includes(gameInfoFromProps.app_name)) {
+        setVisible(true)
+      }
+    }
+
+    window.addEventListener('visible-cards', callback)
+
+    return () => {
+      window.removeEventListener('visible-cards', callback)
+    }
+  }, [])
+
+  const [gameInfo, setGameInfo] = useState<GameInfo>(gameInfoFromProps)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [isLaunching, setIsLaunching] = useState(false)
 
@@ -75,16 +89,18 @@ const GameCard = ({
   const navigate = useNavigate()
 
   const {
-    layout,
     hiddenGames,
     favouriteGames,
-    allTilesInColor,
     showDialogModal,
-    setIsSettingsModalOpen
+    setIsSettingsModalOpen,
+    activeController
   } = useContext(ContextProvider)
+
+  const { layout } = useContext(LibraryContext)
 
   const {
     title,
+    art_cover,
     art_square: cover,
     art_logo: logo = undefined,
     app_name: appName,
@@ -93,12 +109,17 @@ const GameCard = ({
     install: gameInstallInfo
   } = { ...gameInfoFromProps }
 
+  const isInstallable =
+    gameInfo.installable === undefined || gameInfo.installable // If it's undefined we assume it's installable
+
   const [progress, previousProgress] = hasProgress(appName)
   const { install_size: size = '0' } = {
     ...gameInstallInfo
   }
 
   const { status, folder, label } = hasStatus(appName, gameInfo, size)
+
+  const isBrowserGame = gameInfo.install.platform === 'Browser'
 
   useEffect(() => {
     setIsLaunching(false)
@@ -138,6 +159,19 @@ const GameCard = ({
   }
 
   const renderIcon = () => {
+    if (!isInstallable) {
+      return (
+        <FontAwesomeIcon
+          title={t(
+            'label.game.not-installable-game',
+            'Game is NOT Installable'
+          )}
+          className="downIcon"
+          icon={faBan}
+        />
+      )
+    }
+
     if (notSupportedGame) {
       return (
         <FontAwesomeIcon
@@ -191,14 +225,17 @@ const GameCard = ({
       )
     }
     if (isInstalled) {
+      const disabled =
+        isLaunching ||
+        ['syncing-saves', 'launching', 'winetricks', 'redist'].includes(status!)
       return (
         <SvgButton
           className={!notAvailable ? 'playIcon' : 'notAvailableIcon'}
           onClick={async () => handlePlay(runner)}
           title={`${t('label.playing.start')} (${title})`}
-          disabled={isLaunching || status === 'syncing-saves'}
+          disabled={disabled}
         >
-          <PlayIcon />
+          {justPlayed ? <span>PLAY</span> : <PlayIcon />}
         </SvgButton>
       )
     } else {
@@ -259,7 +296,7 @@ const GameCard = ({
       // install
       label: t('button.install'),
       onclick: () => buttonClick(),
-      show: !isInstalled && !isQueued
+      show: !isInstalled && !isQueued && isInstallable
     },
     {
       // cancel installation/update
@@ -273,6 +310,17 @@ const GameCard = ({
       onclick: () =>
         navigate(`/gamepage/${runner}/${appName}`, { state: { gameInfo } }),
       show: true
+    },
+    {
+      // settings
+      label: t('submenu.settings', 'Settings'),
+      onclick: () => setIsSettingsModalOpen(true, 'settings', gameInfo),
+      show: isInstalled && !isUninstalling && !isBrowserGame
+    },
+    {
+      label: t('submenu.logs', 'Logs'),
+      onclick: () => setIsSettingsModalOpen(true, 'log', gameInfo),
+      show: isInstalled && !isUninstalling && !isBrowserGame
     },
     {
       // hide
@@ -292,6 +340,11 @@ const GameCard = ({
       show: !isFavouriteGame
     },
     {
+      label: t('submenu.categories', 'Categories'),
+      onclick: () => setIsSettingsModalOpen(true, 'category', gameInfo),
+      show: true
+    },
+    {
       label: t('button.remove_from_favourites', 'Remove From Favourites'),
       onclick: () => favouriteGames.remove(appName),
       show: isFavouriteGame
@@ -302,37 +355,39 @@ const GameCard = ({
       show: isRecent
     },
     {
-      // settings
-      label: t('submenu.settings'),
-      onclick: () => setIsSettingsModalOpen(true, 'settings', gameInfo),
-      show: isInstalled && !isUninstalling
-    },
-    {
       // uninstall
       label: t('button.uninstall'),
       onclick: onUninstallClick,
-      show: isInstalled && !isUpdating
+      show: isInstalled && !isUpdating && !isPlaying
     }
   ]
 
   const instClass = isInstalled ? 'installed' : ''
   const hiddenClass = isHiddenGame ? 'hidden' : ''
   const notAvailableClass = notAvailable ? 'notAvailable' : ''
-  const imgClasses = `gameImg ${isInstalled ? 'installed' : ''} ${
-    allTilesInColor ? 'allTilesInColor' : ''
-  }`
-  const logoClasses = `gameLogo ${isInstalled ? 'installed' : ''} ${
-    allTilesInColor && 'allTilesInColor'
-  }`
+  const gamepadClass = activeController ? 'gamepad' : ''
+  const justPlayedClass = justPlayed ? 'justPlayed' : ''
+  const imgClasses = `gameImg ${isInstalled ? 'installed' : ''}`
+  const logoClasses = `gameLogo ${isInstalled ? 'installed' : ''}`
 
   const wrapperClasses = `${
     grid ? 'gameCard' : 'gameListItem'
-  }  ${instClass} ${hiddenClass} ${notAvailableClass}`
-
-  const { activeController } = useContext(ContextProvider)
+  }  ${instClass} ${hiddenClass} ${notAvailableClass} ${gamepadClass} ${justPlayedClass}`
 
   const showUpdateButton =
     hasUpdate && !isUpdating && !isQueued && !notAvailable
+
+  if (!visible) {
+    return (
+      <div
+        className={wrapperClasses}
+        data-app-name={appName}
+        data-invisible={true}
+      ></div>
+    )
+  }
+
+  const showSettingsButton = isInstalled && !isUninstalling && !isBrowserGame
 
   return (
     <div>
@@ -340,11 +395,12 @@ const GameCard = ({
         <UninstallModal
           appName={appName}
           runner={runner}
+          isDlc={Boolean(gameInfo.install.is_dlc)}
           onClose={() => setShowUninstallModal(false)}
         />
       )}
       <ContextMenu items={items}>
-        <div className={wrapperClasses}>
+        <div className={wrapperClasses} data-app-name={appName}>
           {haveStatus && <span className="gameCardStatus">{label}</span>}
           <Link
             to={`/gamepage/${runner}/${appName}`}
@@ -354,12 +410,20 @@ const GameCard = ({
             }
           >
             <StoreLogos runner={runner} />
-            <CachedImage
-              src={getImageFormatting(cover, runner)}
-              className={imgClasses}
-              alt="cover"
-            />
-            {logo && (
+            {justPlayed ? (
+              <CachedImage
+                src={art_cover || fallBackImage}
+                className="justPlayedImg"
+                alt={title}
+              />
+            ) : (
+              <CachedImage
+                src={getImageFormatting(cover, runner)}
+                className={imgClasses}
+                alt="cover"
+              />
+            )}
+            {(justPlayed || runner !== 'nile') && logo && (
               <CachedImage
                 alt="logo"
                 src={`${logo}?h=400&resize=1&w=300`}
@@ -394,11 +458,7 @@ const GameCard = ({
             </span>
           </Link>
           <>
-            <span
-              className={classNames('icons', {
-                gamepad: activeController
-              })}
-            >
+            <span className="icons">
               {showUpdateButton && (
                 <SvgButton
                   className="updateIcon"
@@ -408,7 +468,7 @@ const GameCard = ({
                   <FontAwesomeIcon size={'2x'} icon={faRepeat} />
                 </SvgButton>
               )}
-              {isInstalled && !isUninstalling && (
+              {showSettingsButton && (
                 <>
                   <SvgButton
                     title={`${t('submenu.settings')} (${title})`}

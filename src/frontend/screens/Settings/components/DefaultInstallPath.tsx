@@ -1,42 +1,37 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import useSetting from 'frontend/hooks/useSetting'
-import { TextInputWithIconField } from 'frontend/components/UI'
+import { PathSelectionBox } from 'frontend/components/UI'
+import { hasHelp } from 'frontend/hooks/hasHelp'
 
 const DefaultInstallPath = () => {
   const { t } = useTranslation()
+
+  hasHelp(
+    'defaultInstallPath',
+    t('setting.default-install-path'),
+    <p>
+      {t(
+        'help.content.defaultInstallPath',
+        'This is the default path preselected when installing games.'
+      )}
+    </p>
+  )
   const [defaultInstallPath, setDefaultInstallPath] = useSetting(
     'defaultInstallPath',
     ''
   )
 
-  const onFolderIconClick = async () => {
-    window.api
-      .openDialog({
-        buttonLabel: t('box.choose'),
-        properties: ['openDirectory'],
-        title: t('box.default-install-path'),
-        defaultPath: defaultInstallPath
-      })
-      .then((path) => setDefaultInstallPath(path || defaultInstallPath))
-  }
-
   return (
-    <TextInputWithIconField
+    <PathSelectionBox
+      type="directory"
+      onPathChange={setDefaultInstallPath}
+      path={defaultInstallPath}
+      pathDialogTitle={t('box.default-install-path')}
+      pathDialogDefaultPath={defaultInstallPath}
       label={t('setting.default-install-path')}
       htmlId="default_install_path"
-      value={defaultInstallPath?.replaceAll("'", '')}
-      placeholder={defaultInstallPath}
-      onChange={(event) => setDefaultInstallPath(event.target.value)}
-      icon={
-        <FontAwesomeIcon
-          icon={faFolderOpen}
-          data-testid="setinstallpathbutton"
-        />
-      }
-      onIconClick={onFolderIconClick}
+      noDeleteButton
     />
   )
 }

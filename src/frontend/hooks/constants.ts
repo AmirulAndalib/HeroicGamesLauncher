@@ -1,16 +1,18 @@
 import { Runner, Status } from 'common/types'
-import { TFunction } from 'react-i18next'
+import { TFunction } from 'i18next'
 
 type StatusArgs = {
   status: Status
   t: TFunction<'gamepage', undefined>
   runner: Runner
+  statusContext?: string
   percent?: number
   size?: string
 }
 
 export function getStatusLabel({
   status,
+  statusContext,
   t,
   runner,
   size,
@@ -23,16 +25,24 @@ export function getStatusLabel({
     queued: `${t('gamepage:status.queued', 'Queued')}`,
     uninstalling: t('gamepage:status.uninstalling', 'Uninstalling'),
     updating: `${t('gamepage:status.updating')} ${Math.ceil(percent || 0)}%`,
-    installing: `${t('gamepage:status.installing')} ${Math.ceil(
+    installing: `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
       percent || 0
     )}%`,
+    extracting: t('gamepage:status.extracting', 'Extracting'),
     'syncing-saves': t('gamepage:status.syncingSaves', 'Syncing Saves'),
     moving: t('gamepage:gamecard.moving', 'Moving'),
     repairing: t('gamepage:gamecard.repairing', 'Repairing'),
     installed: `${t('gamepage:status.installed')} ${
       runner === 'sideload' ? '' : size
     }`,
-    notInstalled: t('gamepage:status.notinstalled')
+    notInstalled: t('gamepage:status.notinstalled'),
+    launching: t('gamepage:status.launching', 'Launching'),
+    winetricks: t('gamepage:status.winetricks', 'Applying Winetricks fixes'),
+    redist: t(
+      'gamepage:status.redist',
+      'Installing Redistributables ({{redist}})',
+      { redist: statusContext || '' }
+    )
   }
 
   return statusMap[status] || t('gamepage:status.notinstalled')
